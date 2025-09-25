@@ -1,0 +1,8 @@
+{
+  "i18n-ally.enabledFrameworks": ["vue", "vue-sfc"],
+  "i18n-ally.sourceLanguage": "zh-TW",
+  "i18n-ally.displayLanguage": "zh-TW",
+  "i18n-ally.keystyle": "nested",
+  "i18n-ally.localesPaths": ["app/i18n"],
+  "i18n-ally.extract.ignored": ["Google", "Discord"]
+}

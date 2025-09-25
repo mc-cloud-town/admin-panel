@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "paths": {
+      "~/*": ["./app/*"],
+      "@/*": ["./app/*"],
+      "~~/*": ["./*"],
+      "@@/*": ["./*"],
+      "#tests": ["./tests"],
+      "#tests/*": ["./tests/*"],
+      "#shared": ["./shared"],
+      "#shared/*": ["./shared/*"]
+    },
+    "lib": ["esnext", "webworker", "dom.iterable"]
+  },
+  "include": ["./shared/**/*.d.ts", "./server/**/*", "./tests/**/*"],
+  "exclude": ["./node_modules", "./dist"]
+}
