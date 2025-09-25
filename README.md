@@ -91,4 +91,4 @@ yarn coverage
 
 ## 授權
 
-MIT License
+GPL-3.0 license
