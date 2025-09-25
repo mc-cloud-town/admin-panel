@@ -2,16 +2,16 @@ import {
   boolean,
   index,
   integer,
-  membersTable,
   pgTable,
   primaryKey,
-  rolesTable,
   serial,
   text,
   timestamp,
   uniqueIndex,
   uuid,
-} from '.';
+} from 'drizzle-orm/pg-core';
+
+import { membersTable, rolesTable } from '.';
 
 // 代理伺服器列表 - 單一
 export const minecraftProxyServersTable = pgTable(

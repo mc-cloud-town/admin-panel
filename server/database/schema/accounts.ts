@@ -1,4 +1,4 @@
-import { integer, pgTable, serial, text } from '.';
+import { integer, pgTable, serial, text } from 'drizzle-orm/pg-core';
 
 // Discord 角色 - 單一
 export const discordRoleTable = pgTable('discord_roles', {

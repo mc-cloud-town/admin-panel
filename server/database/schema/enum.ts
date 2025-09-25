@@ -1,5 +1,4 @@
-import { pgEnum } from '.';
-
+import { pgEnum } from 'drizzle-orm/pg-core';
 // export const MemberStatusEnum = pgEnum('member_status_enum', [
 //   'FORM_SUBMITTED', // 表單已提交
 //   'FORM_APPROVED', // 一審通過

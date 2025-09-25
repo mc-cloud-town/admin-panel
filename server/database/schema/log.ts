@@ -1,14 +1,17 @@
 import {
   index,
   jsonb,
-  membersTable,
-  minecraftServersTable,
-  MinecraftServerStatusEnum,
   pgTable,
   serial,
   text,
   timestamp,
   uuid,
+} from 'drizzle-orm/pg-core';
+
+import {
+  membersTable,
+  minecraftServersTable,
+  MinecraftServerStatusEnum,
 } from '.';
 
 // 操作日誌 - 單一

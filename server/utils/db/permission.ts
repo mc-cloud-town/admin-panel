@@ -1,24 +1,15 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import type { PgColumn } from 'drizzle-orm/pg-core';
 
-import { membersTable } from '~~/server/database/schema';
+export const hasPermission = (
+  permissions: number,
+  requiredPermissions: number | number[]
+) => {
+  if (Array.isArray(requiredPermissions)) {
+    return requiredPermissions.some((perm) => (permissions & perm) === perm);
+  }
+  return (permissions & requiredPermissions) === requiredPermissions;
+};
 
 export const hasPermissionSql = (column: PgColumn, bit: number) =>
   sql`${column}&${bit}=${bit}`;
-
-export const hasMemberWithPermissions = async (
-  memberID: MemberID,
-  permission: number
-) => {
-  await useDrizzle()
-    .select()
-    .from(membersTable)
-    .where(
-      and(
-        eq(membersTable.id, memberID),
-        hasPermissionSql(membersTable.permissions, permission)
-      )
-    )
-    .limit(1)
-    .execute();
-};

@@ -12,10 +12,15 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    benchmark: {
-      include: ['**/tests/**/*.bench.ts'],
-    },
     environment: 'node',
-    include: ['tests/**/*.test.ts'],
+    include: ['tests/**/*.test.ts', 'tests/**/*.spec.ts'],
+    setupFiles: ['tests/server/db/db.setup.ts'],
+    // benchmark: {
+    //   include: ['tests/**/*.bench.ts'],
+    // },
+    // typecheck: {
+    //   tsconfig: 'tsconfig.json',
+    //   include: ['tests/**/*.ts'],
+    // },
   },
 });

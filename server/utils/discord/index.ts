@@ -1,6 +1,6 @@
 import { Client, GatewayIntentBits } from 'discord.js';
+import { sql } from 'drizzle-orm';
 
-import { sql } from '~~/server/database/schema';
 import { discordRoleTable } from '~~/server/database/schema/accounts';
 
 export const CTEC_GUILD_ID = '933290709589577728';

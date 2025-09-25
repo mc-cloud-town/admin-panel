@@ -1,15 +1,14 @@
 import {
-  EventStatusEnum,
   index,
   integer,
-  membersTable,
   pgTable,
   primaryKey,
   text,
   timestamp,
   uuid,
-} from '.';
-import { discordRoleTable } from './accounts';
+} from 'drizzle-orm/pg-core';
+
+import { discordRoleTable, EventStatusEnum, membersTable } from '.';
 
 // 角色列表 - 單一
 export const rolesTable = pgTable(
