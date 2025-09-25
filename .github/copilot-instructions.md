@@ -2,7 +2,7 @@
 
 ## 架構與分層
 
-- Nuxt 3 + TypeScript 全端專案，分層明確：
+- Nuxt 4 + TypeScript 全端專案，分層明確：
   - `app/`：前端頁面、元件、i18n、middleware、佈局
   - `server/`：API（Nuxt server routes）、資料庫 schema/migration、伺服器邏輯
   - `shared/`：型別、API 契約、語系共用

@@ -1,6 +1,6 @@
 # CloudTown Admin Panel
 
-一個基於 Nuxt 3、TypeScript、Drizzle ORM 的現代化管理後台，支援多語系、權限控管、伺服器管理、會員審核等功能。
+一個基於 Nuxt 4、TypeScript、Drizzle ORM 的現代化管理後台，支援多語系、權限控管、伺服器管理、會員審核等功能。
 
 ## 專案目標
 
@@ -30,7 +30,7 @@
 
 ## 技術棧
 
-- Nuxt 3 (Vue 3)
+- Nuxt 4 (Vue 3)
 - TypeScript
 - Drizzle ORM
 - Vitest (單元/基準測試)
