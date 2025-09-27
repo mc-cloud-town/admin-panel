@@ -3,6 +3,7 @@ import { is } from 'drizzle-orm';
 import { Cache } from 'drizzle-orm/cache/core';
 import type { CacheConfig } from 'drizzle-orm/cache/core/types';
 import { getTableName, Table } from 'drizzle-orm/table';
+import type { KeyvOptions } from 'keyv';
 import Keyv from 'keyv';
 
 export class RedisCache extends Cache {
@@ -14,12 +15,13 @@ export class RedisCache extends Cache {
 
   constructor(
     url: string = 'redis://localhost:6379',
-    options?: Omit<Keyv.Options<unknown>, 'store' | 'uri'>
+    options?: Omit<KeyvOptions, 'store' | 'uri'>
   ) {
     super();
     this.kv = new Keyv({
       ttl: this.globalTtl,
       store: new KeyvRedis({ url }),
+      namespace: 'drizzle-orm-cache',
       ...options,
     });
     this.setupEventHandlers();

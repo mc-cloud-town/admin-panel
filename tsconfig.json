@@ -7,5 +7,10 @@
     { "path": "./.nuxt/tsconfig.shared.json" },
     { "path": "./.nuxt/tsconfig.node.json" },
     { "path": "./tsconfig.test.json" }
-  ]
+  ],
+
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true
+  }
 }

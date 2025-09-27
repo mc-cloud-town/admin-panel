@@ -8,10 +8,9 @@ import { Client as PgClient } from 'pg';
 
 import config from '~~/drizzle.config';
 import * as schema from '~~/server/database/schema';
+import { RedisCache } from '~~/server/utils/db/cache';
 
 import { seedSetupDB } from './db-setup.utils';
-
-// import { RedisCache } from '~~/server/utils/db/cache';
 
 const DATABASE_URL = process.env.NUXT_TEST_DATABASE_URL || '';
 
@@ -39,7 +38,9 @@ export const createTestDatabase = async (): Promise<TestDB> => {
   const testDbUrl = DATABASE_URL.replace(/\/[^/]+$/, `/${dbName}`);
   const db = drizzle(testDbUrl, {
     schema,
-    // cache: new RedisCache(process.env.NUXT_TEST_REDIS_URL),
+    cache: new RedisCache(process.env.NUXT_TEST_REDIS_URL, {
+      namespace: `drizzle-orm-test-${dbName}`,
+    }),
   });
 
   await migrate(db, { migrationsFolder: config.out! });
