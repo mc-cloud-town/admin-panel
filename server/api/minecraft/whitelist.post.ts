@@ -7,7 +7,7 @@ import {
   memberRolesTable,
   minecraftIPWhitelistTable,
   minecraftPlayerMembersTable,
-  minecraftPlayerTable,
+  minecraftPlayersTable,
   minecraftServerPlayerWhitelistTable,
   minecraftServerRoleWhitelistTable,
   minecraftServersTable,
@@ -90,12 +90,12 @@ export default defineEventHandler<
     `${CACHE_MINECRAFT_WHITELIST}:${playerIDCacheKey}`,
     async () => {
       const r = await db
-        .select({ id: minecraftPlayerTable.id })
-        .from(minecraftPlayerTable)
+        .select({ id: minecraftPlayersTable.id })
+        .from(minecraftPlayersTable)
         .where(
           'uuid' in data
-            ? eq(minecraftPlayerTable.uuid, data.uuid)
-            : eq(minecraftPlayerTable.name, data.playerName)
+            ? eq(minecraftPlayersTable.uuid, data.uuid)
+            : eq(minecraftPlayersTable.name, data.playerName)
         )
         .limit(1)
         .execute();

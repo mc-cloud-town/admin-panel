@@ -14,7 +14,6 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['tests/**/*.test.ts', 'tests/**/*.spec.ts'],
-    setupFiles: ['tests/server/db/db.setup.ts'],
     // benchmark: {
     //   include: ['tests/**/*.bench.ts'],
     // },

@@ -3,16 +3,17 @@ import {
   eventsTable,
   memberRolesTable,
   membersTable,
+  minecraftPlayerMembersTable,
+  minecraftPlayersTable,
+  minecraftServerRoleWhitelistTable,
+  minecraftServersTable,
   rolesTable,
 } from '~~/server/database/schema';
 import { Permissions } from '~~/server/utils/permission';
 
-import { resetDB, useTestDB } from './db.utils';
+import type { TestDB } from './db.utils';
 
-export const setupMembersData = async () => {
-  const db = useTestDB();
-  await resetDB();
-
+export const setupMembersData = async (db: TestDB) => {
   const [member1, member2, member3] = await db
     .insert(membersTable)
     .values([
@@ -52,4 +53,62 @@ export const setupMembersData = async () => {
   ]);
 
   return { member1, member2, member3, role1, role2, role3, event1, event2 };
+};
+
+export const setupMinecraft = async (
+  db: TestDB,
+  {
+    member1,
+    member2,
+    member3,
+    role1,
+    role3,
+  }: Awaited<ReturnType<typeof setupMembersData>>
+) => {
+  const [server1, server2, server3] = await db
+    .insert(minecraftServersTable)
+    .values([
+      { ipAddress: '192.168.1.1', port: 25565, name: 'Server 1' },
+      { ipAddress: '192.168.1.2', port: 25565, name: 'Server 2' },
+      { ipAddress: '192.168.1.3', port: 25565, name: 'Server 3' },
+    ])
+    .returning();
+
+  const [player1, player2, player3, player4] = await db
+    .insert(minecraftPlayersTable)
+    .values([
+      { name: 'Steve', uuid: '11111111-1111-1111-1111-111111111111' },
+      { name: 'Alex', uuid: '22222222-2222-2222-2222-222222222222' },
+      { name: 'Herobrine', uuid: '33333333-3333-3333-3333-333333333333' },
+      { name: 'Notch', uuid: '44444444-4444-4444-4444-444444444444' },
+    ])
+    .returning();
+
+  await db
+    .insert(minecraftPlayerMembersTable)
+    .values([
+      { memberRefID: member1.id, minecraftPlayerRefID: player1.id },
+      { memberRefID: member1.id, minecraftPlayerRefID: player2.id },
+      { memberRefID: member2.id, minecraftPlayerRefID: player2.id },
+      { memberRefID: member3.id, minecraftPlayerRefID: player3.id },
+    ])
+    .execute();
+
+  await db
+    .insert(minecraftServerRoleWhitelistTable)
+    .values([
+      { roleRefID: role1.id, minecraftServerRefID: server1.id, allow: true },
+      { roleRefID: role1.id, minecraftServerRefID: server2.id, allow: false },
+      { roleRefID: role3.id, minecraftServerRefID: server3.id, allow: true },
+    ])
+    .execute();
+
+  return { server1, server2, server3, player1, player2, player3, player4 };
+};
+
+export const seedSetupDB = async (db: TestDB) => {
+  const members = await setupMembersData(db);
+  const minecraft = await setupMinecraft(db, members);
+
+  return { ...members, ...minecraft };
 };

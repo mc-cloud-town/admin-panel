@@ -12,6 +12,7 @@ import {
 } from '~~/server/database/schema';
 
 import type { MemberID } from '../type';
+import { hasPermission } from './permission';
 
 export const getMemberRoles = async <
   P extends Partial<RoleSelectFields> = object

@@ -18,6 +18,7 @@
     "auth:generate": "npx @better-auth/cli generate --config server/utils/auth.ts --output server/database/auth-schema.ts"
   },
   "dependencies": {
+    "@keyv/redis": "^5.1.2",
     "@nuxt/image": "1.11.0",
     "@nuxt/ui": "^3.3.3",
     "@nuxtjs/i18n": "^10.1.0",
@@ -26,7 +27,6 @@
     "discord.js": "^14.22.1",
     "dotenv": "^17.2.2",
     "drizzle-orm": "^0.44.5",
-    "ioredis": "^5.7.0",
     "nuxt": "^4.1.2",
     "pg": "^8.16.3",
     "resend": "^6.1.0",
@@ -41,6 +41,8 @@
   },
   "devDependencies": {
     "@nuxt/eslint": "^1.9.0",
+    "@types/pg": "^8.15.5",
+    "@vitest/coverage-v8": "3.2.4",
     "drizzle-kit": "^0.31.4",
     "eslint": "^9.35.0",
     "eslint-plugin-import": "^2.32.0",

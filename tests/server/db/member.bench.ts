@@ -2,13 +2,20 @@ import { bench, describe } from 'vitest';
 
 import { rolesTable } from '~~/server/database/schema';
 import { getMemberRoles } from '~~/server/utils/db/member';
-import { useTestDB } from '~~/tests/utils/db.utils';
+import type { TestDBCtx } from '~~/tests/utils/db.utils';
+import { withTestDB } from '~~/tests/utils/db.utils';
+
+let dbCtx: TestDBCtx;
+beforeAll(async () => {
+  const { ctx, close } = await withTestDB();
+
+  dbCtx = ctx;
+  return close;
+});
 
 describe('Benchmark: getMemberRoles', () => {
-  const db = useTestDB();
-
   bench('getMemberRoles()', async () => {
-    await getMemberRoles(db, dbCtx.member1.id, {
+    await getMemberRoles(dbCtx.db, dbCtx.member1.id, {
       id: rolesTable.id,
       name: rolesTable.name,
     });

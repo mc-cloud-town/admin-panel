@@ -47,7 +47,7 @@ export const minecraftServersTable = pgTable(
 );
 
 // Minecraft 玩家 - 單一
-export const minecraftPlayerTable = pgTable('minecraft_players', {
+export const minecraftPlayersTable = pgTable('minecraft_players', {
   id: serial('id').primaryKey(),
 
   name: text('name').notNull(),
@@ -94,7 +94,7 @@ export const minecraftServerPlayerWhitelistTable = pgTable(
       .references(() => minecraftServersTable.id, { onDelete: 'cascade' }),
     minecraftPlayerRefID: integer('minecraft_player_ref_id')
       .notNull()
-      .references(() => minecraftPlayerTable.id, { onDelete: 'cascade' }),
+      .references(() => minecraftPlayersTable.id, { onDelete: 'cascade' }),
   },
   (table) => [
     uniqueIndex('minecraft_server_player_whitelist_unique_index').on(
@@ -119,7 +119,7 @@ export const minecraftPlayerSessionsTable = pgTable(
     ipAddress: text('ip_address').notNull(),
     minecraftPlayerRefID: integer('minecraft_player_ref_id')
       .notNull()
-      .references(() => minecraftPlayerTable.id, { onDelete: 'cascade' }),
+      .references(() => minecraftPlayersTable.id, { onDelete: 'cascade' }),
     minecraftServerRefID: uuid('minecraft_server_ref_id')
       .notNull()
       .references(() => minecraftServersTable.id, { onDelete: 'cascade' }),
@@ -178,7 +178,7 @@ export const minecraftPlayerMembersTable = pgTable(
       .references(() => membersTable.id, { onDelete: 'cascade' }),
     minecraftPlayerRefID: integer('minecraft_player_ref_id')
       .notNull()
-      .references(() => minecraftPlayerTable.id, { onDelete: 'cascade' }),
+      .references(() => minecraftPlayersTable.id, { onDelete: 'cascade' }),
   },
   (table) => [
     primaryKey({ columns: [table.memberRefID, table.minecraftPlayerRefID] }),

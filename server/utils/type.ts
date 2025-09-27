@@ -30,3 +30,9 @@ export type MinecraftPlayerID = number;
 export type MinecraftUUID = string;
 export type MinecraftPlayerName = string;
 export type MinecraftServerID = string;
+
+export type ExactlyOne<T extends object> = T extends unknown
+  ? {
+      [K in keyof T]: Pick<T, K> & Partial<Record<Exclude<keyof T, K>, never>>;
+    }[keyof T]
+  : never;

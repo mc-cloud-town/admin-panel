@@ -7,11 +7,17 @@ import {
   hasMemberWithPermissions,
 } from '~~/server/utils/db/member';
 import { Permissions } from '~~/server/utils/permission';
-import { useTestDB } from '~~/tests/utils/db.utils';
+import { type TestDBCtx, withTestDB } from '~~/tests/utils/db.utils';
+
+let dbCtx: TestDBCtx;
+beforeAll(async () => {
+  const { ctx, close } = await withTestDB();
+
+  dbCtx = ctx;
+  return close;
+});
 
 describe('getMemberRoles', () => {
-  const db = useTestDB();
-
   it('should return all member roles correctly', async () => {
     const { member1, member2, member3, role1, role2, role3 } = dbCtx;
 
@@ -22,7 +28,7 @@ describe('getMemberRoles', () => {
     ];
 
     for (const { memberID, expectedRoles } of testCases) {
-      const roles = await getMemberRoles(db, memberID, {});
+      const roles = await getMemberRoles(dbCtx.db, memberID, {});
 
       expectTypeOf(roles).toEqualTypeOf<{ id: string }[]>();
       expect(roles.map((r) => r.id).sort()).toEqual(expectedRoles.sort());
@@ -30,7 +36,7 @@ describe('getMemberRoles', () => {
   });
 
   it('should return empty array for unknown member', async () => {
-    const roles = await getMemberRoles(db, '_m999', {
+    const roles = await getMemberRoles(dbCtx.db, '_m999', {
       id: rolesTable.id,
       name: rolesTable.name,
     });
@@ -39,7 +45,7 @@ describe('getMemberRoles', () => {
   });
 
   it('should return only selected columns', async () => {
-    const roles = await getMemberRoles(db, dbCtx.member1.id);
+    const roles = await getMemberRoles(dbCtx.db, dbCtx.member1.id);
 
     expect(roles.map((r) => r.id).sort()).toEqual(
       [dbCtx.role1.id, dbCtx.role2.id].sort()
@@ -48,7 +54,7 @@ describe('getMemberRoles', () => {
 
   it('should return roles only from direct membership when include="direct"', async () => {
     const roles = await getMemberRoles(
-      db,
+      dbCtx.db,
       dbCtx.member3.id,
       { id: rolesTable.id },
       'direct'
@@ -59,7 +65,7 @@ describe('getMemberRoles', () => {
 
   it('should return roles only from event membership when include="event"', async () => {
     const roles = await getMemberRoles(
-      db,
+      dbCtx.db,
       dbCtx.member3.id,
       { id: rolesTable.id },
       'event'
@@ -71,7 +77,7 @@ describe('getMemberRoles', () => {
   });
 
   it('should return role names correctly', async () => {
-    const roles = await getMemberRoles(db, dbCtx.member1.id, {
+    const roles = await getMemberRoles(dbCtx.db, dbCtx.member1.id, {
       name: rolesTable.name,
     });
 
@@ -84,7 +90,7 @@ describe('getMemberRoles', () => {
   });
 
   it('should return member by id', async () => {
-    const member = await getMember(db, dbCtx.member1.id, {
+    const member = await getMember(dbCtx.db, dbCtx.member1.id, {
       name: membersTable.name,
     });
 
@@ -93,7 +99,7 @@ describe('getMemberRoles', () => {
   });
 
   it('should return only selected fields', async () => {
-    const member = await getMember(db, dbCtx.member2.id, {
+    const member = await getMember(dbCtx.db, dbCtx.member2.id, {
       email: membersTable.email,
     });
 
@@ -104,17 +110,17 @@ describe('getMemberRoles', () => {
   });
 
   it('should return empty array when member not found', async () => {
-    const result = await getMember(db, 'm999');
+    const result = await getMember(dbCtx.db, 'm999');
     expect(result).toEqual([]);
   });
 
   it('should return member permissions correctly', async () => {
     const perm = await hasMemberWithPermissions(
-      db,
+      dbCtx.db,
       dbCtx.member1.id,
       Permissions.ROLE_VIEW
     );
 
-    expect(perm).toBe(0);
+    expect(perm).toBe(true);
   });
 });

@@ -1,4 +1,5 @@
 {
+  "extends": "./tsconfig.json",
   "compilerOptions": {
     "forceConsistentCasingInFileNames": true,
     "strict": true,
@@ -9,7 +10,9 @@
     "moduleResolution": "Bundler",
     "allowJs": true,
     "resolveJsonModule": true,
+    "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
+    "types": ["vitest/globals", "node"],
     "paths": {
       "~/*": ["./app/*"],
       "@/*": ["./app/*"],
