@@ -3,8 +3,10 @@ import {
   eventsTable,
   memberRolesTable,
   membersTable,
+  minecraftIPBlocklistTable,
   minecraftPlayerMembersTable,
   minecraftPlayersTable,
+  minecraftServerPlayerWhitelistTable,
   minecraftServerRoleWhitelistTable,
   minecraftServersTable,
   rolesTable,
@@ -13,7 +15,8 @@ import { Permissions } from '~~/server/utils/permission';
 
 import type { TestDB } from './db.utils';
 
-export const setupMembersData = async (db: TestDB) => {
+export const seedSetupDB = async (db: TestDB) => {
+  // ----------------------------- Members -----------------------------
   const [member1, member2, member3] = await db
     .insert(membersTable)
     .values([
@@ -52,19 +55,7 @@ export const setupMembersData = async (db: TestDB) => {
     { eventRefID: event2.id, memberRefID: member3.id },
   ]);
 
-  return { member1, member2, member3, role1, role2, role3, event1, event2 };
-};
-
-export const setupMinecraft = async (
-  db: TestDB,
-  {
-    member1,
-    member2,
-    member3,
-    role1,
-    role3,
-  }: Awaited<ReturnType<typeof setupMembersData>>
-) => {
+  // ----------------------------- Minecraft -----------------------------
   const [server1, server2, server3] = await db
     .insert(minecraftServersTable)
     .values([
@@ -84,31 +75,61 @@ export const setupMinecraft = async (
     ])
     .returning();
 
-  await db
-    .insert(minecraftPlayerMembersTable)
-    .values([
-      { memberRefID: member1.id, minecraftPlayerRefID: player1.id },
-      { memberRefID: member1.id, minecraftPlayerRefID: player2.id },
-      { memberRefID: member2.id, minecraftPlayerRefID: player2.id },
-      { memberRefID: member3.id, minecraftPlayerRefID: player3.id },
-    ])
-    .execute();
+  await db.insert(minecraftPlayerMembersTable).values([
+    { memberRefID: member1.id, minecraftPlayerRefID: player1.id },
+    { memberRefID: member1.id, minecraftPlayerRefID: player2.id },
+    { memberRefID: member2.id, minecraftPlayerRefID: player2.id },
+    { memberRefID: member3.id, minecraftPlayerRefID: player3.id },
+  ]);
 
-  await db
-    .insert(minecraftServerRoleWhitelistTable)
-    .values([
-      { roleRefID: role1.id, minecraftServerRefID: server1.id, allow: true },
-      { roleRefID: role1.id, minecraftServerRefID: server2.id, allow: false },
-      { roleRefID: role3.id, minecraftServerRefID: server3.id, allow: true },
-    ])
-    .execute();
+  // ----------------------------- IP 白名單 -----------------------------
+  await db.insert(minecraftIPBlocklistTable).values([
+    { minecraftServerRefID: server1.id, ipAddress: '127.0.0.1', allow: true },
+    { minecraftServerRefID: server1.id, ipAddress: '10.0.0.1', allow: true },
+    { minecraftServerRefID: server2.id, ipAddress: '10.0.0.2', allow: false },
+  ]);
 
-  return { server1, server2, server3, player1, player2, player3, player4 };
-};
+  // ----------------------------- 玩家白名單 -----------------------------
+  await db.insert(minecraftServerPlayerWhitelistTable).values([
+    {
+      minecraftServerRefID: server1.id,
+      minecraftPlayerRefID: player1.id,
+      allow: true,
+    },
+    {
+      minecraftServerRefID: server1.id,
+      minecraftPlayerRefID: player2.id,
+      allow: true,
+    },
+    {
+      minecraftServerRefID: server2.id,
+      minecraftPlayerRefID: player3.id,
+      allow: false,
+    },
+  ]);
 
-export const seedSetupDB = async (db: TestDB) => {
-  const members = await setupMembersData(db);
-  const minecraft = await setupMinecraft(db, members);
+  // ----------------------------- 角色白名單 -----------------------------
+  await db.insert(minecraftServerRoleWhitelistTable).values([
+    { roleRefID: role1.id, minecraftServerRefID: server1.id, allow: true },
+    { roleRefID: role1.id, minecraftServerRefID: server2.id, allow: false },
+    { roleRefID: role3.id, minecraftServerRefID: server3.id, allow: true },
+  ]);
 
-  return { ...members, ...minecraft };
+  return {
+    member1,
+    member2,
+    member3,
+    role1,
+    role2,
+    role3,
+    event1,
+    event2,
+    server1,
+    server2,
+    server3,
+    player1,
+    player2,
+    player3,
+    player4,
+  };
 };

@@ -8,7 +8,7 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "test": "vitest run --silent=false",
+    "test": "vitest run --silent=false --reporter verbose",
     "test:bench": "vitest bench",
     "test:type": "vitest typecheck",
     "coverage": "vitest run --coverage",

@@ -12,7 +12,6 @@ import { type TestDBCtx, withTestDB } from '~~/tests/utils/db.utils';
 let dbCtx: TestDBCtx;
 beforeAll(async () => {
   const { ctx, close } = await withTestDB();
-
   dbCtx = ctx;
   return close;
 });
