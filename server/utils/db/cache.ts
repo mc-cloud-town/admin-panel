@@ -6,6 +6,8 @@ import { getTableName, Table } from 'drizzle-orm/table';
 import type { KeyvOptions } from 'keyv';
 import Keyv from 'keyv';
 
+export const CACHE_MINECRAFT_WHITELIST = 'minecraft_whitelist';
+
 export class RedisCache extends Cache {
   private readonly globalTtl = 30_000; // 30s
   private readonly tablesPerKey: Map<string, Set<string>> = new Map();

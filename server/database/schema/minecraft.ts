@@ -138,9 +138,9 @@ export const minecraftPlayerSessionsTable = pgTable(
   ]
 );
 
-// Minecraft IP 白名單 - 單一
-export const minecraftIPWhitelistTable = pgTable(
-  'minecraft_ip_whitelist',
+// Minecraft IP 黑名單 - 單一
+export const minecraftIPBlocklistTable = pgTable(
+  'minecraft_ip_blocklist',
   {
     id: uuid('id').primaryKey().defaultRandom(),
     description: text('description'),
@@ -158,14 +158,14 @@ export const minecraftIPWhitelistTable = pgTable(
       .notNull(),
   },
   (table) => [
-    uniqueIndex('minecraft_ip_whitelist_unique_index').on(
+    uniqueIndex('minecraft_ip_blocklist_unique_index').on(
       table.ipAddress,
       table.minecraftServerRefID
     ),
-    index('minecraft_ip_whitelist_server_ref_id_index').on(
+    index('minecraft_ip_blocklist_server_ref_id_index').on(
       table.minecraftServerRefID
     ),
-    index('minecraft_ip_whitelist_ip_address_index').on(table.ipAddress),
+    index('minecraft_ip_blocklist_ip_address_index').on(table.ipAddress),
   ]
 );
 

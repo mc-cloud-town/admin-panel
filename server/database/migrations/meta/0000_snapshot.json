@@ -1,5 +1,5 @@
 {
-  "id": "88512684-87e7-4895-ac64-99a655ebdaf6",
+  "id": "634092f5-574f-4592-9010-2216dabbd535",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -1142,8 +1142,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.minecraft_ip_whitelist": {
-      "name": "minecraft_ip_whitelist",
+    "public.minecraft_ip_blocklist": {
+      "name": "minecraft_ip_blocklist",
       "schema": "",
       "columns": {
         "id": {
@@ -1193,8 +1193,8 @@
         }
       },
       "indexes": {
-        "minecraft_ip_whitelist_unique_index": {
-          "name": "minecraft_ip_whitelist_unique_index",
+        "minecraft_ip_blocklist_unique_index": {
+          "name": "minecraft_ip_blocklist_unique_index",
           "columns": [
             {
               "expression": "ip_address",
@@ -1214,8 +1214,8 @@
           "method": "btree",
           "with": {}
         },
-        "minecraft_ip_whitelist_server_ref_id_index": {
-          "name": "minecraft_ip_whitelist_server_ref_id_index",
+        "minecraft_ip_blocklist_server_ref_id_index": {
+          "name": "minecraft_ip_blocklist_server_ref_id_index",
           "columns": [
             {
               "expression": "minecraft_server_ref_id",
@@ -1229,8 +1229,8 @@
           "method": "btree",
           "with": {}
         },
-        "minecraft_ip_whitelist_ip_address_index": {
-          "name": "minecraft_ip_whitelist_ip_address_index",
+        "minecraft_ip_blocklist_ip_address_index": {
+          "name": "minecraft_ip_blocklist_ip_address_index",
           "columns": [
             {
               "expression": "ip_address",
@@ -1246,9 +1246,9 @@
         }
       },
       "foreignKeys": {
-        "minecraft_ip_whitelist_minecraft_server_ref_id_minecraft_servers_id_fk": {
-          "name": "minecraft_ip_whitelist_minecraft_server_ref_id_minecraft_servers_id_fk",
-          "tableFrom": "minecraft_ip_whitelist",
+        "minecraft_ip_blocklist_minecraft_server_ref_id_minecraft_servers_id_fk": {
+          "name": "minecraft_ip_blocklist_minecraft_server_ref_id_minecraft_servers_id_fk",
+          "tableFrom": "minecraft_ip_blocklist",
           "tableTo": "minecraft_servers",
           "columnsFrom": [
             "minecraft_server_ref_id"

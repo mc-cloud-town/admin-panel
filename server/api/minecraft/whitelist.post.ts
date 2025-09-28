@@ -5,13 +5,14 @@ import type { CheckWhitelistContracts } from '#shared/contracts/minecraft/whitel
 import { checkWhitelistContracts } from '#shared/contracts/minecraft/whitelist';
 import {
   memberRolesTable,
-  minecraftIPWhitelistTable,
+  minecraftIPBlocklistTable,
   minecraftPlayerMembersTable,
   minecraftPlayersTable,
   minecraftServerPlayerWhitelistTable,
   minecraftServerRoleWhitelistTable,
   minecraftServersTable,
 } from '~~/server/database/schema';
+import { CACHE_MINECRAFT_WHITELIST } from '~~/server/utils/db/cache';
 
 export default defineEventHandler<
   IWhitelistRequest,
@@ -23,27 +24,24 @@ export default defineEventHandler<
   const { ip, serverIP, serverPort } = data;
 
   // Get serverID
-  const serverID = await getOrSetCache(
-    `${CACHE_MINECRAFT_WHITELIST}:addr:${serverIP}:${serverPort}`,
-    async () => {
-      const server = await db
-        .select({ id: minecraftServersTable.id })
-        .from(minecraftServersTable)
-        .where(
-          and(
-            eq(minecraftServersTable.ipAddress, serverIP),
-            eq(minecraftServersTable.port, serverPort)
-          )
-        )
-        .limit(1)
-        .execute();
+  const serverID = await db
+    .select({ id: minecraftServersTable.id })
+    .from(minecraftServersTable)
+    .where(
+      and(
+        eq(minecraftServersTable.ipAddress, serverIP),
+        eq(minecraftServersTable.port, serverPort)
+      )
+    )
+    .limit(1)
+    .$withCache({
+      tag: `${CACHE_MINECRAFT_WHITELIST}:server:${serverIP}:${serverPort}`,
+      config: { ex: 60 * 5 }, // 5 minute
+    })
+    .execute()
+    .then((r) => r.at(0)?.id ?? null);
 
-      return server.length ? server[0].id : false;
-    },
-    { ttl: 60 * 60 * 2 } // 2 hr
-  );
-
-  if (serverID === false) {
+  if (serverID === null) {
     return {
       code: ResponseCode.MC_SERVER_NOT_FOUND,
       data: { ok: false, error: 'Server not found' },
@@ -52,27 +50,24 @@ export default defineEventHandler<
 
   // IP whitelist
   if (ip) {
-    const ipAllowed = await getOrSetCache(
-      `${CACHE_MINECRAFT_WHITELIST}:id:${serverID}:ip:${ip}`,
-      async () => {
-        const ipResult = await db
-          .select({ allow: minecraftIPWhitelistTable.allow })
-          .from(minecraftIPWhitelistTable)
-          .where(
-            and(
-              eq(minecraftIPWhitelistTable.ipAddress, ip),
-              eq(minecraftIPWhitelistTable.minecraftServerRefID, serverID)
-            )
-          )
-          .limit(1)
-          .execute();
+    const ipAllowed = await db
+      .select({ allow: minecraftIPBlocklistTable.allow })
+      .from(minecraftIPBlocklistTable)
+      .where(
+        and(
+          eq(minecraftIPBlocklistTable.ipAddress, ip),
+          eq(minecraftIPBlocklistTable.minecraftServerRefID, serverID)
+        )
+      )
+      .limit(1)
+      .$withCache({
+        tag: `${CACHE_MINECRAFT_WHITELIST}:id:${serverID}:ip:${ip}`,
+        config: { ex: 60 * 5 }, // 5 minute
+      })
+      .execute()
+      .then((r) => r.at(0));
 
-        return ipResult.length ? ipResult[0].allow : true; // 預設 allow
-      },
-      { ttl: 60 * 5 } // 5 minute
-    );
-
-    if (!ipAllowed) {
+    if (ipAllowed && !ipAllowed.allow) {
       return {
         code: ResponseCode.MC_IP_NOT_WHITELISTED,
         data: { ok: false, error: 'IP not allowed' },
@@ -86,25 +81,23 @@ export default defineEventHandler<
       ? (`player:uuid:${data.uuid}` as const)
       : (`player:name:${data.playerName}` as const);
 
-  const playerID = await getOrSetCache(
-    `${CACHE_MINECRAFT_WHITELIST}:${playerIDCacheKey}`,
-    async () => {
-      const r = await db
-        .select({ id: minecraftPlayersTable.id })
-        .from(minecraftPlayersTable)
-        .where(
-          'uuid' in data
-            ? eq(minecraftPlayersTable.uuid, data.uuid)
-            : eq(minecraftPlayersTable.name, data.playerName)
-        )
-        .limit(1)
-        .execute();
+  const playerID = await db
+    .select({ id: minecraftPlayersTable.id })
+    .from(minecraftPlayersTable)
+    .where(
+      'uuid' in data
+        ? eq(minecraftPlayersTable.uuid, data.uuid)
+        : eq(minecraftPlayersTable.name, data.playerName)
+    )
+    .limit(1)
+    .$withCache({
+      tag: `${CACHE_MINECRAFT_WHITELIST}:${playerIDCacheKey}`,
+      config: { ex: 60 * 5 }, // 5 minute
+    })
+    .execute()
+    .then((r) => r.at(0)?.id ?? null);
 
-      return r.length ? r[0].id : false;
-    }
-  );
-
-  if (playerID === false) {
+  if (playerID === null) {
     return {
       code: ResponseCode.MC_PLAYER_NOT_FOUND,
       data: { ok: false, error: 'Player not found' },
@@ -112,33 +105,22 @@ export default defineEventHandler<
   }
 
   // Player whitelist allow
-  const playerAllowed = await getOrSetCache(
-    `${CACHE_MINECRAFT_WHITELIST}:id:${serverID}:player:${playerID}`,
-    async () => {
-      const playerWhitelistStatus = await db
-        .select({ allow: minecraftServerPlayerWhitelistTable.allow })
-        .from(minecraftServerPlayerWhitelistTable)
-        .where(
-          and(
-            eq(
-              minecraftServerPlayerWhitelistTable.minecraftPlayerRefID,
-              playerID
-            ),
-            eq(
-              minecraftServerPlayerWhitelistTable.minecraftServerRefID,
-              serverID
-            )
-          )
-        )
-        .limit(1)
-        .execute();
-
-      return playerWhitelistStatus.length
-        ? playerWhitelistStatus[0].allow
-        : true; // default allow
-    },
-    { ttl: 60 * 5 } // 5 minute
-  );
+  const playerAllowed = await db
+    .select({ allow: minecraftServerPlayerWhitelistTable.allow })
+    .from(minecraftServerPlayerWhitelistTable)
+    .where(
+      and(
+        eq(minecraftServerPlayerWhitelistTable.minecraftPlayerRefID, playerID),
+        eq(minecraftServerPlayerWhitelistTable.minecraftServerRefID, serverID)
+      )
+    )
+    .limit(1)
+    .$withCache({
+      tag: `${CACHE_MINECRAFT_WHITELIST}:id:${serverID}:player:${playerID}`,
+      config: { ex: 60 * 5 }, // 5 minute
+    })
+    .execute()
+    .then((r) => r.at(0));
 
   if (!playerAllowed) {
     return {
@@ -148,41 +130,32 @@ export default defineEventHandler<
   }
 
   // Role whitelist
-  const roleAllowed = await getOrSetCache(
-    `${CACHE_MINECRAFT_WHITELIST}:id:${serverID}:player:${playerID}:roles`,
-    async () => {
-      const roleAllowed = await db
-        .select({ roleID: memberRolesTable.roleRefID })
-        .from(memberRolesTable)
-        .innerJoin(
-          minecraftPlayerMembersTable,
-          eq(
-            memberRolesTable.memberRefID,
-            minecraftPlayerMembersTable.memberRefID
-          )
-        )
-        .innerJoin(
-          minecraftServerRoleWhitelistTable,
-          and(
-            eq(
-              memberRolesTable.roleRefID,
-              minecraftServerRoleWhitelistTable.roleRefID
-            ),
-            eq(
-              minecraftServerRoleWhitelistTable.minecraftServerRefID,
-              serverID
-            ),
-            eq(minecraftServerRoleWhitelistTable.allow, true)
-          )
-        )
-        .where(eq(minecraftPlayerMembersTable.minecraftPlayerRefID, playerID))
-        .limit(1)
-        .execute();
-
-      return !!roleAllowed.length;
-    },
-    { ttl: 60 * 5 } // 5 minute
-  );
+  const roleAllowed = await db
+    .select({ roleID: memberRolesTable.roleRefID })
+    .from(memberRolesTable)
+    .innerJoin(
+      minecraftPlayerMembersTable,
+      eq(memberRolesTable.memberRefID, minecraftPlayerMembersTable.memberRefID)
+    )
+    .innerJoin(
+      minecraftServerRoleWhitelistTable,
+      and(
+        eq(
+          memberRolesTable.roleRefID,
+          minecraftServerRoleWhitelistTable.roleRefID
+        ),
+        eq(minecraftServerRoleWhitelistTable.minecraftServerRefID, serverID),
+        eq(minecraftServerRoleWhitelistTable.allow, true)
+      )
+    )
+    .where(eq(minecraftPlayerMembersTable.minecraftPlayerRefID, playerID))
+    .limit(1)
+    .$withCache({
+      tag: `${CACHE_MINECRAFT_WHITELIST}:id:${serverID}:whitelist_roles`,
+      config: { ex: 60 * 5 }, // 5 minute
+    })
+    .execute()
+    .then((r) => r.at(0));
 
   if (!roleAllowed) {
     return {

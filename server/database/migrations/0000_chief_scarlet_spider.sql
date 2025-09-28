@@ -137,7 +137,7 @@ CREATE TABLE "roles" (
 	CONSTRAINT "roles_name_unique" UNIQUE("name")
 );
 --> statement-breakpoint
-CREATE TABLE "minecraft_ip_whitelist" (
+CREATE TABLE "minecraft_ip_blocklist" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"description" text,
 	"ip_address" text NOT NULL,
@@ -212,7 +212,7 @@ ALTER TABLE "events" ADD CONSTRAINT "events_role_ref_id_roles_id_fk" FOREIGN KEY
 ALTER TABLE "member_roles" ADD CONSTRAINT "member_roles_member_ref_id_members_id_fk" FOREIGN KEY ("member_ref_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "member_roles" ADD CONSTRAINT "member_roles_role_ref_id_roles_id_fk" FOREIGN KEY ("role_ref_id") REFERENCES "public"."roles"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "roles" ADD CONSTRAINT "roles_discord_role_ref_id_discord_roles_id_fk" FOREIGN KEY ("discord_role_ref_id") REFERENCES "public"."discord_roles"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "minecraft_ip_whitelist" ADD CONSTRAINT "minecraft_ip_whitelist_minecraft_server_ref_id_minecraft_servers_id_fk" FOREIGN KEY ("minecraft_server_ref_id") REFERENCES "public"."minecraft_servers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "minecraft_ip_blocklist" ADD CONSTRAINT "minecraft_ip_blocklist_minecraft_server_ref_id_minecraft_servers_id_fk" FOREIGN KEY ("minecraft_server_ref_id") REFERENCES "public"."minecraft_servers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "minecraft_player_members" ADD CONSTRAINT "minecraft_player_members_member_ref_id_members_id_fk" FOREIGN KEY ("member_ref_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "minecraft_player_members" ADD CONSTRAINT "minecraft_player_members_minecraft_player_ref_id_minecraft_players_id_fk" FOREIGN KEY ("minecraft_player_ref_id") REFERENCES "public"."minecraft_players"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "minecraft_player_sessions" ADD CONSTRAINT "minecraft_player_sessions_minecraft_player_ref_id_minecraft_players_id_fk" FOREIGN KEY ("minecraft_player_ref_id") REFERENCES "public"."minecraft_players"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -234,9 +234,9 @@ CREATE INDEX "events_role_ref_id_index" ON "events" USING btree ("role_ref_id");
 CREATE INDEX "member_roles_role_ref_id_index" ON "member_roles" USING btree ("role_ref_id");--> statement-breakpoint
 CREATE INDEX "member_roles_member_ref_id_index" ON "member_roles" USING btree ("member_ref_id");--> statement-breakpoint
 CREATE INDEX "roles_discord_role_ref_id_index" ON "roles" USING btree ("discord_role_ref_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "minecraft_ip_whitelist_unique_index" ON "minecraft_ip_whitelist" USING btree ("ip_address","minecraft_server_ref_id");--> statement-breakpoint
-CREATE INDEX "minecraft_ip_whitelist_server_ref_id_index" ON "minecraft_ip_whitelist" USING btree ("minecraft_server_ref_id");--> statement-breakpoint
-CREATE INDEX "minecraft_ip_whitelist_ip_address_index" ON "minecraft_ip_whitelist" USING btree ("ip_address");--> statement-breakpoint
+CREATE UNIQUE INDEX "minecraft_ip_blocklist_unique_index" ON "minecraft_ip_blocklist" USING btree ("ip_address","minecraft_server_ref_id");--> statement-breakpoint
+CREATE INDEX "minecraft_ip_blocklist_server_ref_id_index" ON "minecraft_ip_blocklist" USING btree ("minecraft_server_ref_id");--> statement-breakpoint
+CREATE INDEX "minecraft_ip_blocklist_ip_address_index" ON "minecraft_ip_blocklist" USING btree ("ip_address");--> statement-breakpoint
 CREATE INDEX "minecraft_player_members_member_ref_id_index" ON "minecraft_player_members" USING btree ("member_ref_id");--> statement-breakpoint
 CREATE INDEX "minecraft_player_members_player_ref_id_index" ON "minecraft_player_members" USING btree ("minecraft_player_ref_id");--> statement-breakpoint
 CREATE INDEX "minecraft_player_sessions_player_ref_id_index" ON "minecraft_player_sessions" USING btree ("minecraft_player_ref_id");--> statement-breakpoint
