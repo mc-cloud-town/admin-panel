@@ -1,3 +1,5 @@
+import type { CacheConfig } from 'drizzle-orm/cache/core/types';
+
 export enum ResponseCode {
   // General
   SUCCESS = 0,
@@ -36,3 +38,29 @@ export type ExactlyOne<T extends object> = T extends unknown
       [K in keyof T]: Pick<T, K> & Partial<Record<Exclude<keyof T, K>, never>>;
     }[keyof T]
   : never;
+
+export type DBCacheTag = 'users' | 'roles' | 'servers' | 'whitelists';
+export type DBCacheTags = `${DBCacheTag}` | DBCacheTags[];
+
+declare module 'drizzle-orm/pg-core' {
+  interface PgSelectQueryBuilderBase<
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    THKT,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    TTableName,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    TSelection,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    TSelectMode
+  > {
+    $withCache(
+      config?:
+        | {
+            tag?: DBCacheTags;
+            config?: CacheConfig;
+            autoInvalidate?: boolean;
+          }
+        | false
+    ): this;
+  }
+}

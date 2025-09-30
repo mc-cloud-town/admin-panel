@@ -164,14 +164,17 @@ export const checkMinecraftWhitelist = async (
     };
   }
 
-  if (data.ip && !(await checkIPBlocklist(db, serverID, data.ip))) {
+  const [ipOk, playerID] = await Promise.all([
+    data.ip ? checkIPBlocklist(db, serverID, data.ip) : true,
+    getPlayerID(db, data),
+  ]);
+
+  if (!ipOk) {
     return {
       code: ResponseCode.MC_IP_NOT_WHITELISTED,
       data: { ok: false, error: 'IP not whitelisted' },
     };
   }
-
-  const playerID = await getPlayerID(db, data);
   if (!playerID) {
     return {
       code: ResponseCode.MC_PLAYER_NOT_FOUND,
@@ -179,14 +182,18 @@ export const checkMinecraftWhitelist = async (
     };
   }
 
-  if (!(await checkPlayerWhitelist(db, serverID, playerID))) {
+  const [playerOk, roleOk] = await Promise.all([
+    checkPlayerWhitelist(db, serverID, playerID),
+    checkRoleWhitelist(db, serverID, playerID),
+  ]);
+
+  if (!playerOk) {
     return {
       code: ResponseCode.MC_PLAYER_NOT_WHITELISTED,
       data: { ok: false, error: 'Player not whitelisted' },
     };
   }
-
-  if (!(await checkRoleWhitelist(db, serverID, playerID))) {
+  if (!roleOk) {
     return {
       code: ResponseCode.MC_PLAYER_NOT_WHITELISTED,
       data: { ok: false, error: 'Player role not whitelisted' },

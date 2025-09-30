@@ -35,13 +35,14 @@ export const createTestDatabase = async (): Promise<TestDB> => {
 
   await rootDBRun(`CREATE DATABASE ${dbName};`);
 
-  const testDbUrl = DATABASE_URL.replace(/\/[^/]+$/, `/${dbName}`);
-  const db = drizzle(testDbUrl, {
-    schema,
-    cache: new RedisCache(process.env.NUXT_TEST_REDIS_URL, {
-      namespace: `drizzle-orm-test-${dbName}`,
-    }),
-  });
+  const testDBUrl = DATABASE_URL.replace(/\/[^/]+$/, `/${dbName}`);
+  const redisCache = new RedisCache(
+    process.env.NUXT_TEST_REDIS_URL,
+    { namespace: `drizzle-orm-test-${dbName}` },
+    true
+  );
+  redisCache.connect();
+  const db = drizzle(testDBUrl, { schema, cache: redisCache });
 
   await migrate(db, { migrationsFolder: config.out! });
 
