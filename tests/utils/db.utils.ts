@@ -16,6 +16,7 @@ const DATABASE_URL = process.env.NUXT_TEST_DATABASE_URL || '';
 
 export type TestDB = ReturnType<typeof drizzle<typeof schema, Pool>> & {
   databaseName: string;
+  redisCache: RedisCache;
 };
 export type TestDBCtx = Awaited<ReturnType<typeof seedSetupDB>> & {
   db: TestDB;
@@ -46,7 +47,7 @@ export const createTestDatabase = async (): Promise<TestDB> => {
 
   await migrate(db, { migrationsFolder: config.out! });
 
-  return Object.assign(db, { databaseName: dbName });
+  return Object.assign(db, { redisCache, databaseName: dbName });
 };
 
 export const dropTestDatabase = async (db: TestDB) => {
@@ -62,6 +63,9 @@ export const withTestDB = async () => {
   return {
     db,
     ctx: { db, ...seedData },
-    close: () => dropTestDatabase(db),
+    close: async () => {
+      await dropTestDatabase(db);
+      await db.redisCache.disconnect();
+    },
   };
 };

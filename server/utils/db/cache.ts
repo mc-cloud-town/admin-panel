@@ -194,6 +194,11 @@ export class RedisCache extends Cache {
     }
   }
 
+  public async disconnect(): Promise<void> {
+    await this.redis.quit();
+    this.luaScripts = undefined;
+  }
+
   private setupEventHandlers(): void {
     this.redis.on('error', (err: Error) => {
       console.error('Redis connection error:', err);
