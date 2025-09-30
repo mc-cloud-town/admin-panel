@@ -221,8 +221,7 @@ export class RedisCache extends Cache {
         RedisCache.nonAutoInvalidateTablePrefix,
         key
       );
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return result === null ? undefined : (JSON.parse(result) as any[]);
+      return result === null ? undefined : (JSON.parse(result) as T[]);
     }
 
     if (isTag) {
@@ -230,16 +229,13 @@ export class RedisCache extends Cache {
         [RedisCache.tagsMapKey],
         [key]
       );
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return result ? (JSON.parse(result) as any[]) : undefined;
+      return result ? (JSON.parse(result) as T[]) : undefined;
     }
 
     // Normal cache lookup for the composite key
     const compositeKey = this.getCompositeKey(tables);
     const result = (await this.redis.hGet(compositeKey, key)) ?? undefined; // Retrieve result for normal query
-    console.log('c', typeof result, result);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return result ? (JSON.parse(result) as any[]) : undefined;
+    return result ? (JSON.parse(result) as T[]) : undefined;
   }
 
   override async put<T extends HashTypes>(
