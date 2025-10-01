@@ -30,18 +30,17 @@ const rootDBRun = async (query: string) => {
 };
 
 export const createTestDatabase = async (): Promise<TestDB> => {
-  const dbName = `test_db_${Date.now()}_${crypto
-    .randomUUID()
-    .replace(/-/g, '_')}`;
+  const dbName = `test_db_${Date.now().toString(36)}_${crypto
+    .randomBytes(4)
+    .toString('hex')}`;
 
   await rootDBRun(`CREATE DATABASE ${dbName};`);
 
   const testDBUrl = DATABASE_URL.replace(/\/[^/]+$/, `/${dbName}`);
-  const redisCache = new RedisCache(
-    process.env.NUXT_TEST_REDIS_URL,
-    { namespace: `drizzle-orm-test-${dbName}` },
-    true
-  );
+  const redisCache = new RedisCache(process.env.NUXT_TEST_REDIS_URL, {
+    globally: true,
+    namespace: `panel-admin-${dbName}`,
+  });
   redisCache.connect();
   const db = drizzle(testDBUrl, { schema, cache: redisCache });
 
@@ -67,6 +66,7 @@ export const withTestDB = async <Opt extends DBSeedOptions | undefined>(
     ctx: { db, ...seedData },
     close: async () => {
       await dropTestDatabase(db);
+      await db.redisCache.clearAll();
       await db.redisCache.disconnect();
     },
   };
