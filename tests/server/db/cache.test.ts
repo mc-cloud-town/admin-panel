@@ -3,10 +3,13 @@ import { describe, expect, it } from 'vitest';
 
 import { membersTable } from '~~/server/database/schema';
 import { type TestDBCtx, withTestDB } from '~~/tests/utils/db.utils';
+import type { DBSeedOptions } from '~~/tests/utils/db-setup.utils';
 
-let dbCtx: TestDBCtx;
+const seedWith = {} satisfies DBSeedOptions;
+
+let dbCtx: TestDBCtx<typeof seedWith>;
 beforeAll(async () => {
-  const { ctx, close } = await withTestDB();
+  const { ctx, close } = await withTestDB(seedWith);
   dbCtx = ctx;
   return close;
 });

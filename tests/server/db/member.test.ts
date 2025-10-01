@@ -8,20 +8,18 @@ import {
 } from '~~/server/utils/db/member';
 import { Permissions } from '~~/server/utils/permission';
 import { type TestDBCtx, withTestDB } from '~~/tests/utils/db.utils';
+import type { DBSeedOptions } from '~~/tests/utils/db-setup.utils';
 
-let dbCtx: TestDBCtx<{
-  members: true;
-  roles: true;
-  permissions: true;
-  events: true;
-}>;
+const seedWith = {
+  roles: true,
+  events: true,
+  members: true,
+  permissions: true,
+} satisfies DBSeedOptions;
+
+let dbCtx: TestDBCtx<typeof seedWith>;
 beforeAll(async () => {
-  const { ctx, close } = await withTestDB({
-    members: true,
-    roles: true,
-    permissions: true,
-    events: true,
-  });
+  const { ctx, close } = await withTestDB(seedWith);
   dbCtx = ctx;
   return close;
 });

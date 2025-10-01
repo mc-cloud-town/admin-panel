@@ -4,10 +4,16 @@ import { rolesTable } from '~~/server/database/schema';
 import { getMemberRoles } from '~~/server/utils/db/member';
 import type { TestDBCtx } from '~~/tests/utils/db.utils';
 import { withTestDB } from '~~/tests/utils/db.utils';
+import type { DBSeedOptions } from '~~/tests/utils/db-setup.utils';
 
-let dbCtx: TestDBCtx<{ members: true; roles: true }>;
+const seedWith = {
+  members: true,
+  roles: true,
+} satisfies DBSeedOptions;
+
+let dbCtx: TestDBCtx<typeof seedWith>;
 beforeAll(async () => {
-  const { ctx, close } = await withTestDB({ members: true, roles: true });
+  const { ctx, close } = await withTestDB(seedWith);
   dbCtx = ctx;
   return close;
 });

@@ -2,20 +2,16 @@ import { beforeAll, bench, describe } from 'vitest';
 
 import { checkMinecraftWhitelist } from '~~/server/utils/db/minecraft';
 import { type TestDBCtx, withTestDB } from '~~/tests/utils/db.utils';
+import type { DBSeedOptions } from '~~/tests/utils/db-setup.utils';
 
-let dbCtx: TestDBCtx<{
-  servers: true;
-  players: true;
-  minecraftServers: true;
-  minecraftPlayers: true;
-}>;
+const seedWith = {
+  minecraftServers: true,
+  minecraftPlayers: true,
+} satisfies DBSeedOptions;
+
+let dbCtx: TestDBCtx<typeof seedWith>;
 beforeAll(async () => {
-  const { ctx, close } = await withTestDB({
-    servers: true,
-    players: true,
-    minecraftServers: true,
-    minecraftPlayers: true,
-  });
+  const { ctx, close } = await withTestDB(seedWith);
   dbCtx = ctx;
   return close;
 });

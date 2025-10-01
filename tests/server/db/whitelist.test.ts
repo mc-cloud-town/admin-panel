@@ -3,24 +3,20 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { checkMinecraftWhitelist } from '~~/server/utils/db/minecraft';
 import { ResponseCode } from '~~/server/utils/type';
 import { type TestDBCtx, withTestDB } from '~~/tests/utils/db.utils';
+import type { DBSeedOptions } from '~~/tests/utils/db-setup.utils';
 
-let dbCtx: TestDBCtx<{
-  roles: true;
-  members: true;
-  minecraftServers: true;
-  minecraftPlayers: true;
-  minecraftRelations: true;
-  minecraftWhitelists: true;
-}>;
+const seedWith = {
+  roles: true,
+  members: true,
+  minecraftServers: true,
+  minecraftPlayers: true,
+  minecraftRelations: true,
+  minecraftWhitelists: true,
+} satisfies DBSeedOptions;
+
+let dbCtx: TestDBCtx<typeof seedWith>;
 beforeAll(async () => {
-  const { ctx, close } = await withTestDB({
-    roles: true,
-    members: true,
-    minecraftServers: true,
-    minecraftPlayers: true,
-    minecraftRelations: true,
-    minecraftWhitelists: true,
-  });
+  const { ctx, close } = await withTestDB(seedWith);
   dbCtx = ctx;
   return close;
 });
