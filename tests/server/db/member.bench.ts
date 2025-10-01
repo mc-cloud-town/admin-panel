@@ -5,9 +5,9 @@ import { getMemberRoles } from '~~/server/utils/db/member';
 import type { TestDBCtx } from '~~/tests/utils/db.utils';
 import { withTestDB } from '~~/tests/utils/db.utils';
 
-let dbCtx: TestDBCtx;
+let dbCtx: TestDBCtx<{ members: true; roles: true }>;
 beforeAll(async () => {
-  const { ctx, close } = await withTestDB();
+  const { ctx, close } = await withTestDB({ members: true, roles: true });
   dbCtx = ctx;
   return close;
 });

@@ -4,9 +4,23 @@ import { checkMinecraftWhitelist } from '~~/server/utils/db/minecraft';
 import { ResponseCode } from '~~/server/utils/type';
 import { type TestDBCtx, withTestDB } from '~~/tests/utils/db.utils';
 
-let dbCtx: TestDBCtx;
+let dbCtx: TestDBCtx<{
+  roles: true;
+  members: true;
+  minecraftServers: true;
+  minecraftPlayers: true;
+  minecraftRelations: true;
+  minecraftWhitelists: true;
+}>;
 beforeAll(async () => {
-  const { ctx, close } = await withTestDB();
+  const { ctx, close } = await withTestDB({
+    roles: true,
+    members: true,
+    minecraftServers: true,
+    minecraftPlayers: true,
+    minecraftRelations: true,
+    minecraftWhitelists: true,
+  });
   dbCtx = ctx;
   return close;
 });

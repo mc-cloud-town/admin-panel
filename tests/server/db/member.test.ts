@@ -9,9 +9,19 @@ import {
 import { Permissions } from '~~/server/utils/permission';
 import { type TestDBCtx, withTestDB } from '~~/tests/utils/db.utils';
 
-let dbCtx: TestDBCtx;
+let dbCtx: TestDBCtx<{
+  members: true;
+  roles: true;
+  permissions: true;
+  events: true;
+}>;
 beforeAll(async () => {
-  const { ctx, close } = await withTestDB();
+  const { ctx, close } = await withTestDB({
+    members: true,
+    roles: true,
+    permissions: true,
+    events: true,
+  });
   dbCtx = ctx;
   return close;
 });

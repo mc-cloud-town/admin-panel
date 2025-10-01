@@ -6,9 +6,14 @@ import type { PgTable } from 'drizzle-orm/pg-core';
 import * as schema from '~~/server/database/schema';
 
 const databaseURL = process.env.NUXT_DATABASE_URL || '';
+
+export const redisCache = new RedisCache(process.env.NUXT_REDIS_URL);
+
+redisCache.connect();
+
 const db = drizzle(databaseURL, {
   schema,
-  cache: new RedisCache(process.env.NUXT_REDIS_URL),
+  cache: redisCache,
 });
 
 export const buildConflictUpdateColumns = <

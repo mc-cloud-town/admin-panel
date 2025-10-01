@@ -10,6 +10,7 @@ import config from '~~/drizzle.config';
 import * as schema from '~~/server/database/schema';
 import { RedisCache } from '~~/server/utils/db/cache';
 
+import type { DBSeedOptions } from './db-setup.utils';
 import { seedSetupDB } from './db-setup.utils';
 
 const DATABASE_URL = process.env.NUXT_TEST_DATABASE_URL || '';
@@ -18,9 +19,8 @@ export type TestDB = ReturnType<typeof drizzle<typeof schema, Pool>> & {
   databaseName: string;
   redisCache: RedisCache;
 };
-export type TestDBCtx = Awaited<ReturnType<typeof seedSetupDB>> & {
-  db: TestDB;
-};
+export type TestDBCtx<Opt extends DBSeedOptions | undefined = undefined> =
+  Awaited<ReturnType<typeof seedSetupDB<Opt>>> & { db: TestDB };
 
 const rootDBRun = async (query: string) => {
   const rootDB = new PgClient({ connectionString: DATABASE_URL });
@@ -56,9 +56,11 @@ export const dropTestDatabase = async (db: TestDB) => {
   await rootDBRun(`DROP DATABASE IF EXISTS ${db.databaseName} WITH (FORCE);`);
 };
 
-export const withTestDB = async () => {
+export const withTestDB = async <Opt extends DBSeedOptions | undefined>(
+  seedOptions?: Opt
+) => {
   const db = await createTestDatabase();
-  const seedData = await seedSetupDB(db);
+  const seedData = await seedSetupDB<Opt>(db, seedOptions);
 
   return {
     db,

@@ -3,9 +3,19 @@ import { beforeAll, bench, describe } from 'vitest';
 import { checkMinecraftWhitelist } from '~~/server/utils/db/minecraft';
 import { type TestDBCtx, withTestDB } from '~~/tests/utils/db.utils';
 
-let dbCtx: TestDBCtx;
+let dbCtx: TestDBCtx<{
+  servers: true;
+  players: true;
+  minecraftServers: true;
+  minecraftPlayers: true;
+}>;
 beforeAll(async () => {
-  const { ctx, close } = await withTestDB();
+  const { ctx, close } = await withTestDB({
+    servers: true,
+    players: true,
+    minecraftServers: true,
+    minecraftPlayers: true,
+  });
   dbCtx = ctx;
   return close;
 });

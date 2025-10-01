@@ -40,7 +40,12 @@ export type ExactlyOne<T extends object> = T extends unknown
   : never;
 
 export type DBCacheTag = 'users' | 'roles' | 'servers' | 'whitelists';
-export type DBCacheTags = `${DBCacheTag}` | DBCacheTags[];
+
+export type UnionToIntersection<U> =
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (U extends any ? (x: U) => void : never) extends (x: infer I) => void
+    ? I
+    : never;
 
 declare module 'drizzle-orm/pg-core' {
   interface PgSelectQueryBuilderBase<
@@ -55,11 +60,7 @@ declare module 'drizzle-orm/pg-core' {
   > {
     $withCache(
       config?:
-        | {
-            tag?: DBCacheTags;
-            config?: CacheConfig;
-            autoInvalidate?: boolean;
-          }
+        | { tag?: DBCacheTag; config?: CacheConfig; autoInvalidate?: boolean }
         | false
     ): this;
   }
