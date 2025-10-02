@@ -1,21 +1,19 @@
 /**
- * RedisCache for Drizzle ORM-inspired logic
+ * RedisCache for Drizzle ORM
  *
- * Overview:
- * 1. Provides a Redis-based cache layer inspired by Drizzle ORM.
- * 2. Supports multi-tag cache invalidation.
- * 3. Supports global TTL and Redis event monitoring.
- * 4. Supports namespaces and non-auto-invalidate cache.
+ * Redis-based cache layer with:
+ * - Multi-tag invalidation using Lua scripts
+ * - Namespaced keys and configurable TTL
+ * - Auto and non-auto-invalidate support
+ * - Global or explicit caching strategy
  *
- * License:
- * - This file is licensed under GNU GPLv3
- * - Drizzle ORM is licensed under Apache License 2.0
+ * Usage:
+ * 1. Initialize with Redis URL and options.
+ * 2. Connect via `connect()`.
+ * 3. Use `get()`, `put()`, `onMutate()` for caching.
+ * 4. Optionally clear namespace with `clearAll()`.
  *
- * Modifications:
- * - Full rewrite in TypeScript
- * - Custom Lua scripts for multi-tag invalidation
- * - Global TTL and event handlers
- * - Namespace support
+ * License: GNU GPLv3 (file), Apache License 2.0 (Drizzle ORM)
  */
 
 import type { RedisArgument } from '@redis/client';
@@ -189,8 +187,8 @@ export class RedisCache extends Cache {
 
   /** Disconnect from Redis */
   public async disconnect(): Promise<void> {
-    await this.redis.quit();
     this.luaScripts = undefined;
+    await this.redis.quit();
   }
 
   /** Redis event handlers */
@@ -287,8 +285,9 @@ export class RedisCache extends Cache {
 
     const compositeKey = this.getCompositeKey(tables);
     multi.hSet(compositeKey, namespacedKey, JSON.stringify(response));
-    if (ttlSeconds)
+    if (ttlSeconds) {
       multi.hExpire(compositeKey, namespacedKey, ttlSeconds, hexOptions);
+    }
 
     if (isTag) {
       multi.hSet(

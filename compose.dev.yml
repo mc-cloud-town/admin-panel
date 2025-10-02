@@ -4,7 +4,7 @@ services:
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: ctec-test
+      POSTGRES_DB: ctec
     ports:
       - 5432:5432
 

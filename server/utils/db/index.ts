@@ -5,6 +5,8 @@ import type { PgTable } from 'drizzle-orm/pg-core';
 
 import * as schema from '~~/server/database/schema';
 
+import { RedisCache } from '../db/cache';
+
 const databaseURL = process.env.NUXT_DATABASE_URL || '';
 
 export const redisCache = new RedisCache(process.env.NUXT_REDIS_URL);

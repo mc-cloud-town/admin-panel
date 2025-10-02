@@ -3,10 +3,7 @@ import type {
   InferSessionFromClient,
   InferUserFromClient,
 } from 'better-auth';
-import {
-  apiKeyClient,
-  inferAdditionalFields,
-} from 'better-auth/client/plugins';
+import { inferAdditionalFields } from 'better-auth/client/plugins';
 import { createAuthClient } from 'better-auth/vue';
 import type { RouteLocationRaw } from 'vue-router';
 
@@ -30,7 +27,7 @@ export const useAuth = () => {
   const authClient = createAuthClient({
     baseURL: url.origin,
     fetchOptions: { headers },
-    plugins: [inferAdditionalFields<typeof auth>(), apiKeyClient()],
+    plugins: [inferAdditionalFields<typeof auth>()],
   });
 
   const fetchSession = async () => {
