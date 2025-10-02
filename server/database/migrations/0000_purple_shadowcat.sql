@@ -30,22 +30,23 @@ CREATE TABLE "apikey" (
 	"start" text,
 	"prefix" text,
 	"key" text NOT NULL,
-	"user_id" text NOT NULL,
-	"refill_interval" integer,
-	"refill_amount" integer,
+	"member_ref_id" text NOT NULL,
+	"refill_interval" integer DEFAULT 86400000,
+	"refill_amount" integer DEFAULT 10,
 	"last_refill_at" timestamp,
 	"enabled" boolean DEFAULT true,
 	"rate_limit_enabled" boolean DEFAULT true,
 	"rate_limit_time_window" integer DEFAULT 86400000,
 	"rate_limit_max" integer DEFAULT 10,
 	"request_count" integer DEFAULT 0,
-	"remaining" integer,
+	"remaining" integer DEFAULT 10,
 	"last_request" timestamp,
 	"expires_at" timestamp,
-	"created_at" timestamp NOT NULL,
-	"updated_at" timestamp NOT NULL,
-	"permissions" text,
-	"metadata" text
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	"permissions" integer DEFAULT 0 NOT NULL,
+	"metadata" jsonb,
+	CONSTRAINT "apikey_key_unique" UNIQUE("key")
 );
 --> statement-breakpoint
 CREATE TABLE "members" (
@@ -202,7 +203,7 @@ CREATE TABLE "minecraft_servers" (
 );
 --> statement-breakpoint
 ALTER TABLE "account" ADD CONSTRAINT "account_user_id_members_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "apikey" ADD CONSTRAINT "apikey_user_id_members_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "apikey" ADD CONSTRAINT "apikey_member_ref_id_members_id_fk" FOREIGN KEY ("member_ref_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "session" ADD CONSTRAINT "session_user_id_members_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_actor_id_members_id_fk" FOREIGN KEY ("actor_id") REFERENCES "public"."members"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "minecraft_server_status_logs" ADD CONSTRAINT "minecraft_server_status_logs_server_ref_id_minecraft_servers_id_fk" FOREIGN KEY ("server_ref_id") REFERENCES "public"."minecraft_servers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -222,6 +223,8 @@ ALTER TABLE "minecraft_server_player_whitelist" ADD CONSTRAINT "minecraft_server
 ALTER TABLE "minecraft_server_player_whitelist" ADD CONSTRAINT "minecraft_server_player_whitelist_minecraft_player_ref_id_minecraft_players_id_fk" FOREIGN KEY ("minecraft_player_ref_id") REFERENCES "public"."minecraft_players"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "minecraft_server_role_whitelist" ADD CONSTRAINT "minecraft_server_role_whitelist_minecraft_server_ref_id_minecraft_servers_id_fk" FOREIGN KEY ("minecraft_server_ref_id") REFERENCES "public"."minecraft_servers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "minecraft_server_role_whitelist" ADD CONSTRAINT "minecraft_server_role_whitelist_role_ref_id_roles_id_fk" FOREIGN KEY ("role_ref_id") REFERENCES "public"."roles"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "api_key_member_ref_id_idx" ON "apikey" USING btree ("member_ref_id");--> statement-breakpoint
+CREATE INDEX "api_key_key_idx" ON "apikey" USING btree ("key");--> statement-breakpoint
 CREATE INDEX "audit_logs_table_name_index" ON "audit_logs" USING btree ("table_name");--> statement-breakpoint
 CREATE INDEX "audit_logs_record_id_index" ON "audit_logs" USING btree ("record_id");--> statement-breakpoint
 CREATE INDEX "audit_logs_actor_id_index" ON "audit_logs" USING btree ("actor_id");--> statement-breakpoint

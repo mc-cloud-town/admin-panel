@@ -1,5 +1,5 @@
 {
-  "id": "634092f5-574f-4592-9010-2216dabbd535",
+  "id": "7af5b3f6-260a-4239-a90d-e96dec27dc1e",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -189,8 +189,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "user_id": {
-          "name": "user_id",
+        "member_ref_id": {
+          "name": "member_ref_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -199,13 +199,15 @@
           "name": "refill_interval",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "default": 86400000
         },
         "refill_amount": {
           "name": "refill_amount",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "default": 10
         },
         "last_refill_at": {
           "name": "last_refill_at",
@@ -252,7 +254,8 @@
           "name": "remaining",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "default": 10
         },
         "last_request": {
           "name": "last_request",
@@ -270,35 +273,69 @@
           "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": "now()"
         },
         "updated_at": {
           "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": "now()"
         },
         "permissions": {
           "name": "permissions",
-          "type": "text",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "default": 0
         },
         "metadata": {
           "name": "metadata",
-          "type": "text",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "api_key_member_ref_id_idx": {
+          "name": "api_key_member_ref_id_idx",
+          "columns": [
+            {
+              "expression": "member_ref_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "api_key_key_idx": {
+          "name": "api_key_key_idx",
+          "columns": [
+            {
+              "expression": "key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
-        "apikey_user_id_members_id_fk": {
-          "name": "apikey_user_id_members_id_fk",
+        "apikey_member_ref_id_members_id_fk": {
+          "name": "apikey_member_ref_id_members_id_fk",
           "tableFrom": "apikey",
           "tableTo": "members",
           "columnsFrom": [
-            "user_id"
+            "member_ref_id"
           ],
           "columnsTo": [
             "id"
@@ -308,7 +345,15 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "apikey_key_unique": {
+          "name": "apikey_key_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "key"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
