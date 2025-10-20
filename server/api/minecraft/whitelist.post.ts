@@ -3,6 +3,10 @@ import type { EventHandlerRequest } from 'h3';
 import type { CheckWhitelistContracts } from '#shared/contracts/minecraft/whitelist';
 import { checkWhitelistContracts } from '#shared/contracts/minecraft/whitelist';
 
+/**
+ * 檢查 Minecraft 白名單
+ * POST /api/minecraft/whitelist
+ */
 export default defineEventHandler<
   IWhitelistRequest,
   Promise<IAPIResponse<IWhitelistResponse>>

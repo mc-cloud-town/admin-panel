@@ -6,6 +6,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uuid,
 } from 'drizzle-orm/pg-core';
 
 import { members } from '../auth-schema';
@@ -20,7 +21,7 @@ export {
 export const apiKeyTable = pgTable(
   'apikey',
   {
-    id: text('id').primaryKey(),
+    id: uuid('id').primaryKey().defaultRandom(),
     name: text('name'),
     start: text('start'),
     prefix: text('prefix'),
