@@ -100,36 +100,4 @@ export const getAuthSession = async (event: H3Event) => {
   return session;
 };
 
-export const requireAuth = async (
-  event: H3Event,
-  type: 'session' | 'api' | 'both' = 'both'
-) => {
-  const headers = event.headers;
-  const authorizationHeader = headers.get('authorization') || '';
-  const withHeader = authorizationHeader?.startsWith('Bearer ');
-
-  if (type === 'api' && !withHeader) {
-    throw createError({ statusCode: 403, statusMessage: 'Unauthorized' });
-  }
-
-  if (withHeader) {
-    if (type === 'session') {
-      throw createError({ statusCode: 403, statusMessage: 'Unauthorized' });
-    }
-
-    const apiKey = authorizationHeader?.slice(7) || '';
-    if (!apiKey) {
-      throw createError({ statusCode: 403, statusMessage: 'Unauthorized' });
-    }
-    //   await auth.api.verifyApiKey({
-    //     body: { key: apiKey },
-    //   });
-    // }
-    // const session = await getAuthSession(event);
-    // if (!session || !session.user) {
-    //   throw createError({ statusCode: 403, statusMessage: 'Unauthorized' });
-    // }
-    // event.context.user = session.user;
-    // return session.user;
-  }
-};
+export * from './apiKey';

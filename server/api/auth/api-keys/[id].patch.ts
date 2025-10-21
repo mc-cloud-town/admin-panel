@@ -1,14 +1,15 @@
 import { eq } from 'drizzle-orm';
 
 import { apiKeyTable } from '~~/server/database/schema';
-import { updateAPIKey } from '~~/server/utils/auth/apiKey';
-import { hasMemberWithPermissions } from '~~/server/utils/db/member';
+import { updateAPIKey } from '~~/server/utils/auth';
+import { checkPermission } from '~~/server/utils/guards/permission';
 import { Permissions } from '~~/server/utils/permission';
 import { UpdateAPIKeyRequestSchema } from '~~/shared/contracts/auth/apiKey';
 
 /**
  * 更新 API Key
  * PATCH /api/auth/api-keys/:id
+ * 權限：API_TOKEN_CREATE（更新自己的）或 API_TOKEN_ADMIN（更新所有）
  */
 export default defineEventHandler(async (event) => {
   const session = await getAuthSession(event);
@@ -49,9 +50,9 @@ export default defineEventHandler(async (event) => {
 
   // 如果不是自己的 key，檢查是否有管理權限
   if (apiKey.memberRefID !== session.user.id) {
-    const hasAdminPermission = await hasMemberWithPermissions(
+    const hasAdminPermission = await checkPermission(
       db,
-      session.user.id,
+      event,
       Permissions.API_TOKEN_ADMIN
     );
 
@@ -74,7 +75,7 @@ export default defineEventHandler(async (event) => {
   return {
     id: updated.id,
     name: updated.name,
-    displayKey: `${updated.prefix}${updated.start}...${'*'.repeat(24)}`,
+    start: `${updated.prefix}${updated.start}`,
     permissions: updated.permissions,
     enabled: updated.enabled,
     rateLimitEnabled: updated.rateLimitEnabled,

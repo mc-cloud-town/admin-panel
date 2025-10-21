@@ -18,6 +18,10 @@ export {
   verification as verificationTable,
 } from '../auth-schema';
 
+export const REFILL_INVALID_DEFAULT = 86400000; // 1 day, in milliseconds
+export const RATE_LIMIT_TIME_WINDOW_DEFAULT = 86400000; // 1 day, in milliseconds
+export const RATE_LIMIT_MAX_DEFAULT = 10; // 10 requests
+
 export const apiKeyTable = pgTable(
   'apikey',
   {
@@ -30,16 +34,18 @@ export const apiKeyTable = pgTable(
       .notNull()
       .references(() => members.id, { onDelete: 'cascade' }),
 
-    refillInterval: integer('refill_interval').default(86400000), // ms, 1 day
+    refillInterval: integer('refill_interval').default(REFILL_INVALID_DEFAULT), // ms, 1 day
     refillAmount: integer('refill_amount').default(10),
     lastRefillAt: timestamp('last_refill_at'),
 
     enabled: boolean('enabled').default(true),
     rateLimitEnabled: boolean('rate_limit_enabled').default(true),
-    rateLimitTimeWindow: integer('rate_limit_time_window').default(86400000), // ms, 1 day
-    rateLimitMax: integer('rate_limit_max').default(10),
+    rateLimitTimeWindow: integer('rate_limit_time_window').default(
+      RATE_LIMIT_TIME_WINDOW_DEFAULT
+    ),
+    rateLimitMax: integer('rate_limit_max').default(RATE_LIMIT_MAX_DEFAULT),
     requestCount: integer('request_count').default(0),
-    remaining: integer('remaining').default(10),
+    remaining: integer('remaining').default(RATE_LIMIT_MAX_DEFAULT),
     lastRequest: timestamp('last_request'),
 
     expiresAt: timestamp('expires_at'),

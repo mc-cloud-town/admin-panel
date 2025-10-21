@@ -1,8 +1,9 @@
-import { listMemberAPIKeys } from '~~/server/utils/auth/apiKey';
+import { listMemberAPIKeys } from '~~/server/utils/auth';
 
 /**
  * 取得當前成員的所有 API Keys
  * GET /api/auth/api-keys
+ * 權限：需登入（查看自己的 API Keys）
  */
 export default defineEventHandler(async (event) => {
   const session = await getAuthSession(event);

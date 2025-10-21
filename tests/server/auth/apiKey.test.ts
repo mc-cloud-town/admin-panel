@@ -15,7 +15,7 @@ import {
   listMemberAPIKeys,
   updateAPIKey,
   validateAPIKey,
-} from '~~/server/utils/auth/apiKey';
+} from '~~/server/utils/auth';
 import { Permissions } from '~~/server/utils/permission';
 import type { TestDBCtx } from '~~/tests/utils/db.utils';
 import { withTestDB } from '~~/tests/utils/db.utils';
@@ -44,7 +44,7 @@ describe('API Key Management', () => {
 
       expect(result.id).toBeDefined();
       expect(result.key).toBeDefined();
-      expect(result.displayKey).toMatch(/^ctec_[a-zA-Z0-9_-]{8}\.\.\.\*{24}$/);
+      expect(result.start).toMatch(/^[a-zA-Z0-9_-]{8}$/);
       expect(result.hashedKey).toBeDefined();
       expect(result.prefix).toBe('ctec_');
       expect(result.start).toHaveLength(8);
@@ -174,7 +174,7 @@ describe('API Key Management', () => {
 
       const deleted = await deleteAPIKey(dbCtx.db, created.id);
 
-      expect(deleted).toBe(true);
+      expect(deleted !== null).toBe(true);
 
       const retrieved = await dbCtx.db
         .select()
@@ -188,7 +188,7 @@ describe('API Key Management', () => {
       const nonExistentID = randomUUID();
       const deleted = await deleteAPIKey(dbCtx.db, nonExistentID);
 
-      expect(deleted).toBe(false);
+      expect(deleted !== null).toBe(false);
     });
   });
 
@@ -219,10 +219,10 @@ describe('API Key Management', () => {
         expiresAt: futureDate,
       });
 
-      const deletedCount = await deleteAPIAllExpiredKeys(dbCtx.db);
+      const deletedKeys = await deleteAPIAllExpiredKeys(dbCtx.db);
 
       // There are 2 expired keys created above
-      expect(deletedCount).toBe(2);
+      expect(deletedKeys.length).toBe(2);
 
       const remaining = await dbCtx.db
         .select()

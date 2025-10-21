@@ -1,17 +1,17 @@
 import { eq } from 'drizzle-orm';
 
 import { apiKeyTable } from '~~/server/database/schema';
-import { deleteAPIKey } from '~~/server/utils/auth/apiKey';
-import { hasMemberWithPermissions } from '~~/server/utils/db/member';
+import { deleteAPIKey } from '~~/server/utils/auth';
+import { checkPermission } from '~~/server/utils/guards/permission';
 import { Permissions } from '~~/server/utils/permission';
 
 /**
  * 刪除 API Key
  * DELETE /api/auth/api-keys/:id
+ * 權限：API_TOKEN_CREATE（刪除自己的）或 API_TOKEN_ADMIN（刪除所有）
  */
 export default defineEventHandler(async (event) => {
   const session = await getAuthSession(event);
-
   if (!session?.user) {
     throw createError({
       statusCode: 401,
@@ -46,9 +46,9 @@ export default defineEventHandler(async (event) => {
 
   // 如果不是自己的 key，檢查是否有管理權限
   if (apiKey.memberRefID !== session.user.id) {
-    const hasAdminPermission = await hasMemberWithPermissions(
+    const hasAdminPermission = await checkPermission(
       db,
-      session.user.id,
+      event,
       Permissions.API_TOKEN_ADMIN
     );
 

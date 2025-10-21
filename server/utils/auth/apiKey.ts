@@ -3,7 +3,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { and, eq, lt } from 'drizzle-orm';
 import type { drizzle } from 'drizzle-orm/node-postgres';
 
-import { apiKeyTable } from '~~/server/database/schema';
+import { apiKeyTable, RATE_LIMIT_MAX_DEFAULT } from '~~/server/database/schema';
 import { hasPermission } from '~~/server/utils/db/permission';
 
 /**
@@ -50,7 +50,6 @@ export interface CreateAPIKeyOptions {
 export interface CreateAPIKeyResult {
   id: string;
   key: string; // 只在創建時返回一次，之後無法取得
-  displayKey: string; // 顯示用（含前綴和開頭）
   hashedKey: string;
   prefix: string;
   start: string;
@@ -62,7 +61,19 @@ export interface CreateAPIKeyResult {
  */
 export const createAPIKey = async (
   db: ReturnType<typeof drizzle>,
-  options: CreateAPIKeyOptions
+  {
+    name,
+    memberRefID,
+    expiresAt,
+    refillInterval,
+    refillAmount,
+    rateLimitEnabled,
+    rateLimitTimeWindow,
+    rateLimitMax,
+    metadata,
+    permissions,
+    ...options
+  }: CreateAPIKeyOptions
 ): Promise<CreateAPIKeyResult> => {
   const rawKey = generateRandomKey(32);
   const hashedKey = hashAPIKey(rawKey);
@@ -73,26 +84,26 @@ export const createAPIKey = async (
   const result = await db
     .insert(apiKeyTable)
     .values({
-      name: options.name,
+      name: name,
       start,
       prefix,
       key: hashedKey,
-      memberRefID: options.memberRefID,
-      permissions: options.permissions ?? 0,
-      expiresAt: options.expiresAt,
-      refillInterval: options.refillInterval,
-      refillAmount: options.refillAmount,
-      rateLimitEnabled: options.rateLimitEnabled,
-      rateLimitTimeWindow: options.rateLimitTimeWindow,
-      rateLimitMax: options.rateLimitMax,
-      remaining: options.rateLimitMax ?? 10,
-      lastRefillAt: now,
-      metadata: options.metadata,
+      memberRefID,
+      permissions,
+      expiresAt,
+      refillInterval,
+      refillAmount,
+      rateLimitEnabled,
+      rateLimitTimeWindow,
+      rateLimitMax,
+      remaining: rateLimitMax ?? RATE_LIMIT_MAX_DEFAULT,
+      metadata,
       createdAt: now,
       updatedAt: now,
+      lastRefillAt: now,
     })
     .returning({ id: apiKeyTable.id })
-    ?.then((res) => res.at(0) ?? null);
+    .then((res) => res.at(0) ?? null);
 
   if (result === null) {
     throw new Error('Failed to create API key');
@@ -101,7 +112,6 @@ export const createAPIKey = async (
   return {
     id: result.id,
     key: rawKey,
-    displayKey: `${prefix}${start}...${'*'.repeat(24)}`,
     hashedKey,
     prefix,
     start,
@@ -115,13 +125,14 @@ export const createAPIKey = async (
 export const deleteAPIKey = async (
   db: ReturnType<typeof drizzle>,
   keyID: string
-): Promise<boolean> => {
+): Promise<{ id: string } | null> => {
   const result = await db
     .delete(apiKeyTable)
     .where(eq(apiKeyTable.id, keyID))
-    .returning({ id: apiKeyTable.id });
+    .returning({ id: apiKeyTable.id })
+    .then((x) => x.at(0) ?? null);
 
-  return result.length > 0;
+  return result;
 };
 
 /**
@@ -129,14 +140,14 @@ export const deleteAPIKey = async (
  */
 export const deleteAPIAllExpiredKeys = async (
   db: ReturnType<typeof drizzle>
-): Promise<number> => {
+): Promise<{ id: string }[]> => {
   const now = new Date();
   const result = await db
     .delete(apiKeyTable)
     .where(lt(apiKeyTable.expiresAt, now))
     .returning({ id: apiKeyTable.id });
 
-  return result.length;
+  return result;
 };
 
 /**
@@ -151,11 +162,12 @@ export const hasAPIKeyPermission = async (
     .select({ permissions: apiKeyTable.permissions })
     .from(apiKeyTable)
     .where(eq(apiKeyTable.id, keyID))
-    .limit(1);
+    .limit(1)
+    .then((x) => x.at(0) ?? null);
 
-  if (apiKey.length === 0) return false;
+  if (apiKey === null) return false;
 
-  return hasPermission(apiKey[0].permissions, permission);
+  return hasPermission(apiKey.permissions, permission);
 };
 
 /**
@@ -287,9 +299,10 @@ export const updateAPIKey = async (
     .update(apiKeyTable)
     .set({ ...updates, updatedAt: new Date() })
     .where(eq(apiKeyTable.id, keyID))
-    .returning();
+    .returning()
+    .then((x) => x.at(0) ?? null);
 
-  return result.length > 0 ? result[0] : null;
+  return result;
 };
 
 /**
@@ -320,11 +333,7 @@ export const validateAPIKey = async (
   valid: boolean;
   apiKey: typeof apiKeyTable.$inferSelect | null;
   error?: string;
-  rateLimit?: {
-    allowed: boolean;
-    remaining: number;
-    resetAt: Date | null;
-  };
+  rateLimit?: { allowed: boolean; remaining: number; resetAt: Date | null };
 }> => {
   const apiKey = await getAPIKeyByHash(db, key);
   if (!apiKey) {

@@ -5,7 +5,7 @@ import {
   getAPIKeyByHash,
   hashAPIKey,
   validateAPIKey,
-} from '~~/server/utils/auth/apiKey';
+} from '~~/server/utils/auth';
 import { Permissions } from '~~/server/utils/permission';
 import type { TestDBCtx } from '~~/tests/utils/db.utils';
 import { withTestDB } from '~~/tests/utils/db.utils';
