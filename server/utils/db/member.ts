@@ -11,8 +11,8 @@ import {
   rolesTable,
 } from '~~/server/database/schema';
 
+import { hasPermission } from '../auth/permission';
 import type { MemberID } from '../type';
-import { hasPermission } from './permission';
 
 export const getMemberRoles = async <
   P extends Partial<RoleSelectFields> = object
@@ -54,7 +54,7 @@ export const getMemberRoles = async <
   return rolesQuery.where(condition).execute();
 };
 
-export const getMember = async <P extends Partial<MemberFields>>(
+export const getMemberFromId = async <P extends Partial<MemberFields>>(
   db: ReturnType<typeof drizzle>,
   memberID: MemberID,
   fields?: P
@@ -69,6 +69,13 @@ export const getMember = async <P extends Partial<MemberFields>>(
   return memberQuery.execute();
 };
 
+/**
+ * 檢查會員是否擁有指定權限（包含角色權限）
+ * @param db 資料庫連線
+ * @param memberOrMemberID 會員 ID 或會員物件
+ * @param permission 欲檢查的權限
+ * @returns
+ */
 export const hasMemberWithPermissions = async (
   db: ReturnType<typeof drizzle>,
   memberOrMemberID: MemberID | { id: MemberID; permissions: number },
@@ -76,7 +83,7 @@ export const hasMemberWithPermissions = async (
 ) => {
   let member: { id: MemberID; permissions: number } | null = null;
   if (typeof memberOrMemberID === 'string') {
-    member = await getMember(db, memberOrMemberID, {
+    member = await getMemberFromId(db, memberOrMemberID, {
       permissions: membersTable.permissions,
     })
       .then((res) => res.at(0) || null)

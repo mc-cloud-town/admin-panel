@@ -6,7 +6,7 @@ import { listMemberAPIKeys } from '~~/server/utils/auth';
  * 權限：需登入（查看自己的 API Keys）
  */
 export default defineEventHandler(async (event) => {
-  const session = await getAuthSession(event);
+  const session = await auth.api.getSession({ headers: event.headers });
   const { offset, limit } = getQuery<{ offset?: string; limit?: string }>(
     event
   );

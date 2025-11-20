@@ -1,7 +1,8 @@
 import { eq } from 'drizzle-orm';
 
 import { apiKeyTable } from '~~/server/database/schema';
-import { checkPermission } from '~~/server/utils/guards/permission';
+import { hasMemberWithPermissions } from '~~/server/utils/db/member';
+import { requireSession } from '~~/server/utils/guards/permission';
 import { Permissions } from '~~/server/utils/permission';
 
 /**
@@ -10,14 +11,12 @@ import { Permissions } from '~~/server/utils/permission';
  * 權限：API_TOKEN_CREATE（查看自己的）或 API_TOKEN_ADMIN（查看所有）
  */
 export default defineEventHandler(async (event) => {
-  const session = await getAuthSession(event);
-  if (!session?.user) {
-    throw createError({
-      statusCode: 401,
-      message: 'Unauthorized',
-    });
-  }
-
+  const db = useDrizzle();
+  const { user } = await requireSession(
+    db,
+    event,
+    Permissions.API_TOKEN_CREATE
+  );
   const keyID = getRouterParam(event, 'id');
   if (!keyID) {
     throw createError({
@@ -26,7 +25,6 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  const db = useDrizzle();
   const apiKey = await db
     .select()
     .from(apiKeyTable)
@@ -42,10 +40,10 @@ export default defineEventHandler(async (event) => {
   }
 
   // 如果不是自己的 key，檢查是否有管理權限
-  if (apiKey.memberRefID !== session.user.id) {
-    const hasAdminPermission = await checkPermission(
+  if (apiKey.memberRefID !== user.id) {
+    const hasAdminPermission = await hasMemberWithPermissions(
       db,
-      event,
+      user.id,
       Permissions.API_TOKEN_ADMIN
     );
 

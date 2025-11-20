@@ -2,7 +2,7 @@ import { describe, expect, expectTypeOf, it } from 'vitest';
 
 import { membersTable, rolesTable } from '~~/server/database/schema';
 import {
-  getMember,
+  getMemberFromId,
   getMemberRoles,
   hasMemberWithPermissions,
 } from '~~/server/utils/db/member';
@@ -97,7 +97,7 @@ describe('getMemberRoles', () => {
   });
 
   it('should return member by id', async () => {
-    const member = await getMember(dbCtx.db, dbCtx.member1.id, {
+    const member = await getMemberFromId(dbCtx.db, dbCtx.member1.id, {
       name: membersTable.name,
     });
 
@@ -106,7 +106,7 @@ describe('getMemberRoles', () => {
   });
 
   it('should return only selected fields', async () => {
-    const member = await getMember(dbCtx.db, dbCtx.member2.id, {
+    const member = await getMemberFromId(dbCtx.db, dbCtx.member2.id, {
       email: membersTable.email,
     });
 
@@ -117,7 +117,7 @@ describe('getMemberRoles', () => {
   });
 
   it('should return empty array when member not found', async () => {
-    const result = await getMember(dbCtx.db, 'm999');
+    const result = await getMemberFromId(dbCtx.db, 'm999');
     expect(result).toEqual([]);
   });
 

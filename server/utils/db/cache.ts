@@ -331,9 +331,12 @@ export class RedisCache extends Cache {
   }
 
   /** Clear all keys under namespace */
-  async clearAll(): Promise<void> {
-    if (this.options.namespace)
+  async clearAll(namespace?: string): Promise<void> {
+    if (namespace) {
+      await this.luaScripts?.deleteFromNamespace([], [namespace]);
+    } else if (this.options.namespace) {
       await this.luaScripts?.deleteFromNamespace([], [this.options.namespace]);
+    }
   }
 }
 

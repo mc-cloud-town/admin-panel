@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 
 import { apiKeyTable } from '~~/server/database/schema';
 import { updateAPIKey } from '~~/server/utils/auth';
-import { checkPermission } from '~~/server/utils/guards/permission';
+import { hasMemberWithPermissions } from '~~/server/utils/db/member';
 import { Permissions } from '~~/server/utils/permission';
 import { UpdateAPIKeyRequestSchema } from '~~/shared/contracts/auth/apiKey';
 
@@ -12,7 +12,7 @@ import { UpdateAPIKeyRequestSchema } from '~~/shared/contracts/auth/apiKey';
  * 權限：API_TOKEN_CREATE（更新自己的）或 API_TOKEN_ADMIN（更新所有）
  */
 export default defineEventHandler(async (event) => {
-  const session = await getAuthSession(event);
+  const session = await auth.api.getSession({ headers: event.headers });
   if (!session?.user) {
     throw createError({
       statusCode: 401,
@@ -50,9 +50,9 @@ export default defineEventHandler(async (event) => {
 
   // 如果不是自己的 key，檢查是否有管理權限
   if (apiKey.memberRefID !== session.user.id) {
-    const hasAdminPermission = await checkPermission(
+    const hasAdminPermission = await hasMemberWithPermissions(
       db,
-      event,
+      session.user.id,
       Permissions.API_TOKEN_ADMIN
     );
 

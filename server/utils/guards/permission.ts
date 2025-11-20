@@ -1,10 +1,13 @@
+import { eq } from 'drizzle-orm';
+import type { PgUpdateSetSource } from 'drizzle-orm/pg-core';
 import type { H3Event } from 'h3';
 
-import type { apiKeyTable } from '~~/server/database/schema';
-import { validateAPIKey } from '~~/server/utils/auth';
+import type { ApiKeyFields } from '~~/server/database/schema';
+import { apiKeyTable } from '~~/server/database/schema';
 import { hasMemberWithPermissions } from '~~/server/utils/db/member';
-import { hasPermission } from '~~/server/utils/db/permission';
 import type { Permissions } from '~~/server/utils/permission';
+
+import { getApiKeyByHash, getApiKeyValueFromHeader } from '../auth';
 
 /**
  * API 權限檢查 Guard
@@ -17,40 +20,38 @@ import type { Permissions } from '~~/server/utils/permission';
  * @throws 401 未登入或 API Key 無效
  * @throws 403 權限不足
  */
-export const requirePermission = async (
+export const requireAuthPermission = async (
   db: ReturnType<typeof useDrizzle>,
   event: H3Event,
   customPermissions?: Permissions | Permissions[],
   mode: 'api' | 'session' | 'both' = 'both'
-) => {
+): Promise<AuthenticatedContext> => {
   // 嘗試使用 API Key 認證
   if (mode === 'api' || mode === 'both') {
-    const apiKeyValidation = await validateApiKeyFromHeader(db, event);
-    if (apiKeyValidation) {
-      const validatedApiKey = await checkApiKeyPermission(apiKeyValidation, {
-        permission: customPermissions,
-        requireEnabled: true,
-        expiredCheck: true,
-      });
+    const token = getApiKeyValueFromHeader(event);
+    if (token) {
+      const validatedApiKey = await checkApiKey(
+        db,
+        token,
+        {
+          permission: customPermissions,
+          expiredCheck: true,
+          requireEnabled: true,
+        },
+        { memberRefID: apiKeyTable.memberRefID }
+      );
 
       if (validatedApiKey && validatedApiKey.apiKey) {
         // API Key 認證成功，返回模擬的 user 物件
+        const apiKeyData = validatedApiKey.apiKey as Record<string, unknown>;
         return {
           user: {
-            id: validatedApiKey.apiKey.memberRefID,
+            id: apiKeyData.memberRefID as string,
             isApiKey: true,
-            apiKeyId: validatedApiKey.apiKey.id,
+            apiKeyId: apiKeyData.id as string,
           },
           db,
         };
-      }
-
-      // API Key 存在但驗證失敗
-      if (mode === 'api') {
-        throw createError({
-          statusCode: 403,
-          message: 'Invalid API key or insufficient permissions',
-        });
       }
     } else if (mode === 'api') {
       // 僅 API Key 模式但未提供
@@ -62,7 +63,7 @@ export const requirePermission = async (
   }
 
   // 嘗試使用 Session 認證
-  const session = await getAuthSession(event);
+  const session = await auth.api.getSession({ headers: event.headers });
   if (!session?.user) {
     throw createError({
       statusCode: 401,
@@ -78,7 +79,7 @@ export const requirePermission = async (
   // 檢查 Session 使用者權限
   const hasRequiredPermission = await hasMemberWithPermissions(
     db,
-    session.user.id,
+    session.user,
     customPermissions
   );
 
@@ -92,49 +93,9 @@ export const requirePermission = async (
   return { user: session.user, db };
 };
 
-/**
- * 檢查使用者是否具有指定權限（不拋出錯誤）
- *
- * @param db Drizzle database instance
- * @param event H3 Event
- * @param permissions 需要檢查的權限
- * @returns 是否具有權限
- */
-export const checkPermission = async (
-  db: ReturnType<typeof useDrizzle>,
-  event: H3Event,
-  permissions: Permissions | Permissions[]
-): Promise<boolean> => {
-  const session = await getAuthSession(event);
-  if (!session?.user) {
-    return false;
-  }
-
-  return hasMemberWithPermissions(db, session.user.id, permissions);
-};
-
-/**
- * 從 HTTP Authorization header 中提取並驗證 API Key
- *
- * @param db Drizzle database instance
- * @param event H3 Event
- * @returns 驗證結果，若無效則返回 null
- */
-export const validateApiKeyFromHeader = async (
-  db: ReturnType<typeof useDrizzle>,
-  event: H3Event
-) => {
-  const authHeader = getHeader(event, 'authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return null;
-  }
-
-  const key = authHeader.slice(7); // 移除 "Bearer " 前綴
-  if (!key) {
-    return null;
-  }
-
-  return await validateAPIKey(db, key);
+export type CheckApiKeyResult = {
+  error?: { code: string; message: string };
+  apiKey: Record<string, unknown> | null;
 };
 
 /**
@@ -148,127 +109,146 @@ export const validateApiKeyFromHeader = async (
  * @param options.expiredCheck 是否檢查過期時間，預設 true
  * @returns 驗證通過返回 apiKey，否則返回 null
  */
-export const checkApiKeyPermission = async (
-  apiKey: Awaited<ReturnType<typeof validateAPIKey>>,
+export const checkApiKey = async (
+  db: ReturnType<typeof useDrizzle>,
+  key: string,
   options: {
     permission?: number | number[];
-    requireEnabled?: boolean;
     expiredCheck?: boolean;
-  } = {}
-) => {
-  const { permission, requireEnabled = true, expiredCheck = true } = options;
+    requireEnabled?: boolean;
+    rateLimitCheck?: boolean;
+    rateLimitIncrement?: number;
+  } = {},
+  fields?: Partial<ApiKeyFields>
+): Promise<CheckApiKeyResult> => {
+  const {
+    permission,
+    expiredCheck = true,
+    requireEnabled = true,
+    rateLimitCheck = true,
+    rateLimitIncrement = 1,
+  } = options;
 
-  // 基本驗證
-  if (apiKey === null || !apiKey.valid || apiKey.apiKey === null) {
-    return null;
+  const apiKey = await getApiKeyByHash(db, key, {
+    ...fields,
+
+    enabled: apiKeyTable.enabled,
+    expiresAt: apiKeyTable.expiresAt,
+    permissions: apiKeyTable.permissions,
+    rateLimitEnabled: apiKeyTable.rateLimitEnabled,
+    refillAmount: apiKeyTable.refillAmount,
+    remaining: apiKeyTable.remaining,
+    lastRequest: apiKeyTable.lastRequest,
+    requestCount: apiKeyTable.requestCount,
+    refillInterval: apiKeyTable.refillInterval,
+  });
+
+  if (apiKey === null) {
+    return {
+      error: {
+        code: 'API_KEY_INVALID',
+        message: 'Invalid API key',
+      },
+      apiKey: null,
+    };
   }
 
   // 檢查啟用狀態
-  if (requireEnabled && !apiKey.apiKey.enabled) {
-    return null;
+  if (requireEnabled && !apiKey.enabled) {
+    return {
+      error: {
+        code: 'API_KEY_DISABLED',
+        message: 'API key is disabled',
+      },
+      apiKey,
+    };
   }
 
   // 檢查過期時間
-  if (
-    expiredCheck &&
-    apiKey.apiKey.expiresAt &&
-    apiKey.apiKey.expiresAt < new Date()
-  ) {
-    return null;
+  const expiresAt = apiKey.expiresAt as Date | null | undefined;
+  if (expiredCheck && expiresAt && expiresAt.getTime() < new Date().getTime()) {
+    return {
+      error: {
+        code: 'API_KEY_EXPIRED',
+        message: 'API key has expired',
+      },
+      apiKey,
+    };
+  }
+
+  const now = Date.now();
+  const newData = {} as PgUpdateSetSource<typeof apiKeyTable>;
+
+  // 處理速率限制(重算剩餘配額、檢查並遞減)
+  if (rateLimitCheck && apiKey.rateLimitEnabled) {
+    const lastRequestTime =
+      apiKey.lastRequest &&
+      typeof apiKey.lastRequest === 'object' &&
+      'getTime' in apiKey.lastRequest
+        ? (apiKey.lastRequest as Date).getTime()
+        : 0;
+    const refillInterval = Number(apiKey.refillInterval || 0);
+    let currentRemaining = Number(apiKey.remaining ?? 0);
+    const refillAmount = Number(apiKey.refillAmount ?? 0);
+
+    // Refill tokens based on elapsed intervals
+    if (refillInterval > 0) {
+      const elapsed = now - lastRequestTime;
+      const intervals = Math.floor(elapsed / refillInterval);
+      if (intervals > 0 && refillAmount > 0) {
+        const tokensToAdd = intervals * refillAmount;
+        // cap to refillAmount as the single-interval bucket size if that was intended,
+        // otherwise cap to a sensible max (use refillAmount if set, else no cap)
+        const cap =
+          refillAmount > 0 ? refillAmount : currentRemaining + tokensToAdd;
+        currentRemaining = Math.min(currentRemaining + tokensToAdd, cap);
+      }
+    }
+
+    // If after refill there are no tokens, rate limit is exceeded
+    if (currentRemaining <= 0) {
+      return {
+        error: {
+          code: 'API_KEY_RATE_LIMIT_EXCEEDED',
+          message: 'API key rate limit exceeded',
+        },
+        apiKey,
+      };
+    }
+
+    // Apply decrement for this request
+    if (rateLimitIncrement > 0) {
+      currentRemaining = currentRemaining - rateLimitIncrement;
+      if (currentRemaining < 0) currentRemaining = 0;
+      newData.remaining = currentRemaining;
+    }
+
+    // 更新最後請求時間
+    newData.lastRequest = new Date(now);
+  }
+
+  if (Object.keys(newData).length > 0) {
+    await db
+      .update(apiKeyTable)
+      .set(newData)
+      .where(eq(apiKeyTable.id, apiKey.id));
   }
 
   // 檢查權限
-  if (permission !== undefined) {
-    const hasPerm = hasPermission(apiKey.apiKey.permissions, permission);
-    if (!hasPerm) {
-      return null;
-    }
+  if (
+    permission !== undefined &&
+    !hasPermission(apiKey.permissions, permission)
+  ) {
+    return {
+      error: {
+        code: 'API_KEY_INSUFFICIENT_PERMISSIONS',
+        message: 'Insufficient API key permissions',
+      },
+      apiKey,
+    };
   }
 
-  return apiKey;
-};
-
-/**
- * API Key 驗證 Middleware
- * 從 Authorization header 驗證 API Key 並檢查權限、速率限制等
- *
- * @param event H3 Event
- * @param requiredPermission 需要的權限（可選）
- * @returns 驗證成功的 API Key 物件
- * @throws 401 缺少或無效的 Authorization header
- * @throws 403 API Key 無效或權限不足
- * @throws 429 速率限制超出
- */
-export const validateAPIKeyMiddleware = async (
-  event: H3Event,
-  requiredPermission?: Permissions | Permissions[]
-) => {
-  const authHeader = getHeader(event, 'authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw createError({
-      statusCode: 401,
-      message: 'Missing or invalid authorization header',
-    });
-  }
-
-  const key = authHeader.slice(7); // 移除 "Bearer " 前綴
-  if (!key) {
-    throw createError({
-      statusCode: 401,
-      message: 'API key is required',
-    });
-  }
-
-  const db = useDrizzle();
-  const validation = await validateAPIKey(
-    db,
-    key,
-    requiredPermission
-      ? Array.isArray(requiredPermission)
-        ? requiredPermission
-        : [requiredPermission]
-      : undefined
-  );
-
-  if (!validation.valid) {
-    if (validation.error === 'Rate limit exceeded') {
-      throw createError({
-        statusCode: 429,
-        message: 'Rate limit exceeded',
-        data: {
-          resetAt: validation.rateLimit?.resetAt,
-          remaining: validation.rateLimit?.remaining,
-        },
-      });
-    }
-
-    throw createError({
-      statusCode: 403,
-      message: validation.error || 'Invalid API key',
-    });
-  }
-
-  // 將 API key 資訊和成員 ID 附加到 event.context
-  event.context.apiKey = validation.apiKey;
-  event.context.memberID = validation.apiKey!.memberRefID;
-
-  // 設定 rate limit headers
-  if (validation.rateLimit) {
-    setHeader(
-      event,
-      'X-RateLimit-Remaining',
-      String(validation.rateLimit.remaining)
-    );
-    if (validation.rateLimit.resetAt) {
-      setHeader(
-        event,
-        'X-RateLimit-Reset',
-        validation.rateLimit.resetAt.toISOString()
-      );
-    }
-  }
-
-  return validation.apiKey!;
+  return { apiKey };
 };
 
 /**
@@ -285,9 +265,7 @@ export const requireAuth = async (
   db: ReturnType<typeof useDrizzle>,
   event: H3Event,
   requiredPermission?: Permissions | Permissions[]
-) => {
-  return requirePermission(db, event, requiredPermission, 'both');
-};
+) => requireAuthPermission(db, event, requiredPermission);
 
 /**
  * 僅允許 Session 認證
@@ -298,13 +276,11 @@ export const requireAuth = async (
  * @throws 401 未登入
  * @throws 403 權限不足
  */
-export const requireSession = async (
+export const requireSession = (
   db: ReturnType<typeof useDrizzle>,
   event: H3Event,
   requiredPermission?: Permissions | Permissions[]
-) => {
-  return requirePermission(db, event, requiredPermission, 'session');
-};
+) => requireAuthPermission(db, event, requiredPermission, 'session');
 
 /**
  * 僅允許 API Key 認證
@@ -319,13 +295,15 @@ export const requireApiKey = async (
   db: ReturnType<typeof useDrizzle>,
   event: H3Event,
   requiredPermission?: Permissions | Permissions[]
-) => {
-  return requirePermission(db, event, requiredPermission, 'api');
-};
+) => requireAuthPermission(db, event, requiredPermission, 'api');
 
-declare module 'h3' {
-  interface H3EventContext {
-    apiKey?: typeof apiKeyTable.$inferSelect | null;
-    memberID?: string;
-  }
+export interface AuthenticatedUser {
+  id: string;
+  isApiKey?: boolean;
+  apiKeyId?: string;
+}
+
+export interface AuthenticatedContext {
+  user: AuthenticatedUser;
+  db: ReturnType<typeof useDrizzle>;
 }

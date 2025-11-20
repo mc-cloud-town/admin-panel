@@ -9,7 +9,7 @@ import {
   createAPIKey,
   deleteAPIAllExpiredKeys,
   deleteAPIKey,
-  getAPIKeyByHash,
+  getApiKeyByHash,
   hasAPIKeyPermission,
   hashAPIKey,
   listMemberAPIKeys,
@@ -123,7 +123,7 @@ describe('API Key Management', () => {
         name: 'Test Key',
       });
 
-      const retrieved = await getAPIKeyByHash(dbCtx.db, created.key);
+      const retrieved = await getApiKeyByHash(dbCtx.db, created.key);
 
       expect(retrieved).not.toBeNull();
       expect(retrieved?.id).toBe(created.id);
@@ -131,12 +131,12 @@ describe('API Key Management', () => {
     });
 
     it('should return null for invalid key', async () => {
-      const retrieved = await getAPIKeyByHash(dbCtx.db, 'invalid-key');
+      const retrieved = await getApiKeyByHash(dbCtx.db, 'invalid-key');
 
       expect(retrieved).toBeNull();
     });
 
-    it('should return null for disabled key', async () => {
+    it('should retrieve disabled key', async () => {
       const created = await createAPIKey(dbCtx.db, {
         memberRefID: testMemberID,
         name: 'Disabled Key',
@@ -145,12 +145,13 @@ describe('API Key Management', () => {
       // 停用 key
       await updateAPIKey(dbCtx.db, created.id, { enabled: false });
 
-      const retrieved = await getAPIKeyByHash(dbCtx.db, created.key);
+      const retrieved = await getApiKeyByHash(dbCtx.db, created.key);
 
-      expect(retrieved).toBeNull();
+      expect(retrieved).not.toBeNull();
+      expect(retrieved?.enabled).toBe(false);
     });
 
-    it('should return null for expired key', async () => {
+    it('should retrieve expired key', async () => {
       const expiresAt = new Date(Date.now() - 1000); // 已過期
 
       const created = await createAPIKey(dbCtx.db, {
@@ -159,9 +160,10 @@ describe('API Key Management', () => {
         expiresAt,
       });
 
-      const retrieved = await getAPIKeyByHash(dbCtx.db, created.key);
+      const retrieved = await getApiKeyByHash(dbCtx.db, created.key);
 
-      expect(retrieved).toBeNull();
+      expect(retrieved).not.toBeNull();
+      expect(retrieved?.expiresAt).toEqual(expiresAt);
     });
   });
 
@@ -428,7 +430,7 @@ describe('API Key Management', () => {
       const result = await validateAPIKey(dbCtx.db, 'invalid-key');
 
       expect(result.valid).toBe(false);
-      expect(result.apiKey).toBeNull();
+      expect(result.apiKey).toBeUndefined();
       expect(result.error).toBe('Invalid API key');
     });
 
@@ -443,7 +445,7 @@ describe('API Key Management', () => {
       const result = await validateAPIKey(dbCtx.db, created.key);
 
       expect(result.valid).toBe(false);
-      expect(result.error).toBe('Invalid API key');
+      expect(result.error).toBe('API key is disabled');
     });
 
     it('should reject API key without required permission', async () => {

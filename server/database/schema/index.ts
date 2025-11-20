@@ -1,4 +1,4 @@
-import type { membersTable } from './auth';
+import type { apiKeyTable, membersTable } from './auth';
 import type { rolesTable } from './member';
 
 export * from './accounts';
@@ -10,3 +10,4 @@ export * from './minecraft';
 
 export type RoleSelectFields = (typeof rolesTable)['_']['columns'];
 export type MemberFields = (typeof membersTable)['_']['columns'];
+export type ApiKeyFields = (typeof apiKeyTable)['_']['columns'];

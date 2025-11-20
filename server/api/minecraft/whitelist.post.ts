@@ -2,7 +2,7 @@ import type { EventHandlerRequest } from 'h3';
 
 import type { CheckWhitelistContracts } from '#shared/contracts/minecraft/whitelist';
 import { checkWhitelistContracts } from '#shared/contracts/minecraft/whitelist';
-import { requirePermission } from '~~/server/utils/guards/permission';
+import { requireAuthPermission } from '~~/server/utils/guards/permission';
 
 /**
  * 檢查 Minecraft 白名單
@@ -14,7 +14,7 @@ export default defineEventHandler<
   Promise<IAPIResponse<IWhitelistResponse>>
 >(async (event) => {
   const db = useDrizzle();
-  await requirePermission(db, event);
+  await requireAuthPermission(db, event);
   const data = await readValidatedBody(event, checkWhitelistContracts.parse);
 
   return checkMinecraftWhitelist(db, data);

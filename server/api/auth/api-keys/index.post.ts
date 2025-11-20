@@ -1,5 +1,5 @@
 import { createAPIKey } from '~~/server/utils/auth';
-import { requirePermission } from '~~/server/utils/guards/permission';
+import { requireAuthPermission } from '~~/server/utils/guards/permission';
 import { Permissions } from '~~/server/utils/permission';
 import { CreateAPIKeyRequestSchema } from '~~/shared/contracts/auth/apiKey';
 
@@ -10,7 +10,7 @@ import { CreateAPIKeyRequestSchema } from '~~/shared/contracts/auth/apiKey';
  */
 export default defineEventHandler(async (event) => {
   const db = useDrizzle();
-  const { user } = await requirePermission(
+  const { user } = await requireAuthPermission(
     db,
     event,
     Permissions.API_TOKEN_CREATE

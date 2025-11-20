@@ -1,36 +1,44 @@
-import { createHash, randomBytes } from 'node:crypto';
+import { createHmac, randomBytes } from 'node:crypto';
 
-import { and, eq, lt } from 'drizzle-orm';
+import { eq, lt } from 'drizzle-orm';
 import type { drizzle } from 'drizzle-orm/node-postgres';
+import type { H3Event } from 'h3';
 
+import type { ApiKeyFields } from '~~/server/database/schema';
 import { apiKeyTable, RATE_LIMIT_MAX_DEFAULT } from '~~/server/database/schema';
-import { hasPermission } from '~~/server/utils/db/permission';
+import { hasPermission } from '~~/server/utils/auth/permission';
 
-/**
- * 生成隨機 API Key
- * @param length - Key 長度，預設 32
- * @returns Base64 URL-safe 格式的 key
- */
+const SERVER_API_KEY_HMAC_SECRET = process.env.SERVER_API_KEY_HMAC_SECRET;
+if (!SERVER_API_KEY_HMAC_SECRET) {
+  throw new Error('Missing SERVER_API_KEY_HMAC_SECRET environment variable');
+}
+
 export const generateRandomKey = (length: number = 32): string => {
   return randomBytes(length).toString('base64url');
 };
 
-/**
- * 生成 API Key 的 hash（用於存儲）
- * @param key - 原始 API Key
- * @returns SHA-256 hash
- */
 export const hashAPIKey = (key: string): string => {
-  return createHash('sha256').update(key).digest('hex');
+  return createHmac('sha256', SERVER_API_KEY_HMAC_SECRET)
+    .update(key)
+    .digest('hex');
 };
 
-/**
- * 生成 API Key 前綴（用於識別）
- * @param prefix - 自定義前綴，預設 'ctec'
- * @returns 格式化的前綴
- */
 const generatePrefix = (prefix: string = 'ctec'): string => {
   return `${prefix}_`;
+};
+
+export const getApiKeyValueFromHeader = (event: H3Event): string | null => {
+  const authHeader = getHeader(event, 'authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return null;
+  }
+
+  const key = authHeader.slice(7).trim(); // 移除 "Bearer " 和 空白
+  if (!key) {
+    return null;
+  }
+
+  return key;
 };
 
 export interface CreateAPIKeyOptions {
@@ -151,131 +159,29 @@ export const deleteAPIAllExpiredKeys = async (
 };
 
 /**
- * 檢查 API Key 是否擁有指定權限
- */
-export const hasAPIKeyPermission = async (
-  db: ReturnType<typeof drizzle>,
-  keyID: string,
-  permission: number | number[]
-): Promise<boolean> => {
-  const apiKey = await db
-    .select({ permissions: apiKeyTable.permissions })
-    .from(apiKeyTable)
-    .where(eq(apiKeyTable.id, keyID))
-    .limit(1)
-    .then((x) => x.at(0) ?? null);
-
-  if (apiKey === null) return false;
-
-  return hasPermission(apiKey.permissions, permission);
-};
-
-/**
  * 透過 hash 取得 API Key 資訊
  */
-export const getAPIKeyByHash = async (
+export const getApiKeyByHash = async <P extends Partial<ApiKeyFields>>(
   db: ReturnType<typeof drizzle>,
-  key: string
+  key: string,
+  fields?: P
 ) => {
   const hashedKey = hashAPIKey(key);
 
-  const apiKey = await db
-    .select()
-    .from(apiKeyTable)
-    .where(and(eq(apiKeyTable.key, hashedKey), eq(apiKeyTable.enabled, true)))
-    .limit(1)
-    .then((x) => x.at(0) ?? null);
+  const apiKeyQuery = fields
+    ? db
+        .select({ ...fields, id: apiKeyTable.id } as P & {
+          id: ApiKeyFields['id'];
+        })
+        .from(apiKeyTable)
+    : db.select().from(apiKeyTable);
 
+  apiKeyQuery.where(eq(apiKeyTable.key, hashedKey)).limit(1);
+
+  const apiKey = await apiKeyQuery.execute().then((x) => x.at(0) ?? null);
   if (apiKey === null) return null;
 
-  // 檢查是否過期
-  if (apiKey.expiresAt && apiKey.expiresAt < new Date()) {
-    return null;
-  }
-
   return apiKey;
-};
-
-/**
- * 檢查並更新 API Key 的速率限制
- * @returns { allowed: boolean, remaining: number, resetAt: Date | null }
- */
-export const checkAndUpdateRateLimit = async (
-  db: ReturnType<typeof drizzle>,
-  keyID: string
-): Promise<{
-  allowed: boolean;
-  remaining: number;
-  resetAt: Date | null;
-}> => {
-  const apiKey = await db
-    .select()
-    .from(apiKeyTable)
-    .where(eq(apiKeyTable.id, keyID))
-    .limit(1)
-    .then((x) => x.at(0) ?? null);
-
-  if (apiKey === null) {
-    return { allowed: false, remaining: 0, resetAt: null };
-  }
-
-  // 如果沒有啟用速率限制
-  if (!apiKey.rateLimitEnabled) {
-    await db
-      .update(apiKeyTable)
-      .set({
-        lastRequest: new Date(),
-        requestCount: (apiKey.requestCount ?? 0) + 1,
-      })
-      .where(eq(apiKeyTable.id, keyID));
-
-    return { allowed: true, remaining: -1, resetAt: null };
-  }
-
-  const now = new Date();
-  const refillInterval = apiKey.refillInterval ?? 86400000; // 預設 1 天
-  const refillAmount = apiKey.refillAmount ?? 10;
-  const lastRefillAt = apiKey.lastRefillAt ?? apiKey.createdAt;
-  const timeSinceRefill = now.getTime() - lastRefillAt.getTime();
-
-  let remaining = apiKey.remaining ?? 0;
-  let newLastRefillAt = lastRefillAt;
-
-  // 檢查是否需要補充額度
-  if (timeSinceRefill >= refillInterval) {
-    const refillCount = Math.floor(timeSinceRefill / refillInterval);
-
-    remaining = Math.min(
-      apiKey.rateLimitMax ?? 10,
-      remaining + refillAmount * refillCount
-    );
-    newLastRefillAt = new Date(
-      lastRefillAt.getTime() + refillCount * refillInterval
-    );
-  }
-
-  // 檢查是否還有額度
-  if (remaining <= 0) {
-    const resetAt = new Date(newLastRefillAt.getTime() + refillInterval);
-
-    return { allowed: false, remaining: 0, resetAt };
-  }
-
-  remaining--;
-
-  await db
-    .update(apiKeyTable)
-    .set({
-      remaining,
-      lastRefillAt: newLastRefillAt,
-      lastRequest: now,
-      requestCount: (apiKey.requestCount ?? 0) + 1,
-    })
-    .where(eq(apiKeyTable.id, keyID));
-
-  const resetAt = new Date(newLastRefillAt.getTime() + refillInterval);
-
-  return { allowed: true, remaining, resetAt };
 };
 
 /**
@@ -323,49 +229,117 @@ export const listMemberAPIKeys = async (
 };
 
 /**
- * 驗證 API Key 並返回完整資訊（含權限檢查和速率限制）
+ * 檢查 API Key 是否擁有指定權限
+ */
+export const hasAPIKeyPermission = async (
+  db: ReturnType<typeof drizzle>,
+  keyID: string,
+  permission: number | number[]
+): Promise<boolean> => {
+  const apiKey = await db
+    .select({ permissions: apiKeyTable.permissions })
+    .from(apiKeyTable)
+    .where(eq(apiKeyTable.id, keyID))
+    .limit(1)
+    .then((x) => x.at(0) ?? null);
+
+  if (apiKey === null) return false;
+
+  return hasPermission(apiKey.permissions, permission);
+};
+
+/**
+ * 檢查並更新速率限制
+ */
+export const checkAndUpdateRateLimit = async (
+  db: ReturnType<typeof drizzle>,
+  keyID: string
+): Promise<{ allowed: boolean; remaining: number; resetAt: Date | null }> => {
+  const apiKey = await db
+    .select({
+      rateLimitEnabled: apiKeyTable.rateLimitEnabled,
+      remaining: apiKeyTable.remaining,
+      rateLimitTimeWindow: apiKeyTable.rateLimitTimeWindow,
+      lastRefillAt: apiKeyTable.lastRefillAt,
+    })
+    .from(apiKeyTable)
+    .where(eq(apiKeyTable.id, keyID))
+    .limit(1)
+    .then((x) => x.at(0) ?? null);
+
+  if (apiKey === null) {
+    return { allowed: false, remaining: 0, resetAt: null };
+  }
+
+  if (!apiKey.rateLimitEnabled) {
+    return { allowed: true, remaining: -1, resetAt: null };
+  }
+
+  const remaining = (apiKey.remaining ?? 0) - 1;
+  const now = new Date();
+  const resetAt = new Date(
+    (apiKey.lastRefillAt?.getTime() ?? now.getTime()) +
+      (apiKey.rateLimitTimeWindow ?? 86400000)
+  );
+
+  if (remaining < 0) {
+    return { allowed: false, remaining: 0, resetAt };
+  }
+
+  await db
+    .update(apiKeyTable)
+    .set({ remaining, lastRequest: now })
+    .where(eq(apiKeyTable.id, keyID));
+
+  return { allowed: true, remaining, resetAt };
+};
+
+/**
+ * 驗證 API Key
  */
 export const validateAPIKey = async (
   db: ReturnType<typeof drizzle>,
   key: string,
-  requiredPermission?: number | number[]
+  permission?: number | number[]
 ): Promise<{
   valid: boolean;
-  apiKey: typeof apiKeyTable.$inferSelect | null;
+  apiKey?: Record<string, unknown>;
   error?: string;
-  rateLimit?: { allowed: boolean; remaining: number; resetAt: Date | null };
+  rateLimit?: { remaining: number; resetAt: Date | null };
 }> => {
-  const apiKey = await getAPIKeyByHash(db, key);
-  if (!apiKey) {
-    return { valid: false, apiKey: null, error: 'Invalid API key' };
+  const apiKey = await getApiKeyByHash(db, key);
+
+  if (apiKey === null) {
+    return { valid: false, error: 'Invalid API key' };
   }
 
   if (!apiKey.enabled) {
-    return { valid: false, apiKey: null, error: 'API key is disabled' };
+    return { valid: false, error: 'API key is disabled' };
   }
 
-  // 檢查權限
-  if (requiredPermission !== undefined) {
-    const hasPerms = hasPermission(apiKey.permissions, requiredPermission);
+  if (apiKey.expiresAt && apiKey.expiresAt < new Date()) {
+    return { valid: false, error: 'API key has expired' };
+  }
+
+  if (permission !== undefined) {
+    const hasPerms = hasPermission(apiKey.permissions ?? 0, permission);
     if (!hasPerms) {
-      return {
-        valid: false,
-        apiKey: null,
-        error: 'Insufficient permissions',
-      };
+      return { valid: false, error: 'Insufficient permissions' };
     }
   }
 
-  // 檢查速率限制
-  const rateLimit = await checkAndUpdateRateLimit(db, apiKey.id);
-  if (!rateLimit.allowed) {
+  // 預設檢查速率限制
+  if (apiKey.rateLimitEnabled) {
+    const rateLimit = await checkAndUpdateRateLimit(db, apiKey.id);
+    if (!rateLimit.allowed) {
+      return { valid: false, error: 'Rate limit exceeded' };
+    }
     return {
-      valid: false,
+      valid: true,
       apiKey,
-      error: 'Rate limit exceeded',
-      rateLimit,
+      rateLimit: { remaining: rateLimit.remaining, resetAt: rateLimit.resetAt },
     };
   }
 
-  return { valid: true, apiKey, rateLimit };
+  return { valid: true, apiKey };
 };

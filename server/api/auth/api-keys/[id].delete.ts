@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 
 import { apiKeyTable } from '~~/server/database/schema';
 import { deleteAPIKey } from '~~/server/utils/auth';
-import { checkPermission } from '~~/server/utils/guards/permission';
+import { hasMemberWithPermissions } from '~~/server/utils/db/member';
 import { Permissions } from '~~/server/utils/permission';
 
 /**
@@ -11,13 +11,11 @@ import { Permissions } from '~~/server/utils/permission';
  * 權限：API_TOKEN_CREATE（刪除自己的）或 API_TOKEN_ADMIN（刪除所有）
  */
 export default defineEventHandler(async (event) => {
-  const session = await getAuthSession(event);
-  if (!session?.user) {
-    throw createError({
-      statusCode: 401,
-      message: 'Unauthorized',
-    });
-  }
+  const db = useDrizzle();
+  const session = await requireSession(db, event, [
+    Permissions.API_TOKEN_CREATE,
+    Permissions.API_TOKEN_ADMIN,
+  ]);
 
   const keyID = getRouterParam(event, 'id');
   if (!keyID) {
@@ -26,8 +24,6 @@ export default defineEventHandler(async (event) => {
       message: 'API Key ID is required',
     });
   }
-
-  const db = useDrizzle();
 
   // 檢查 API Key 是否存在且屬於當前用戶
   const apiKey = await db
@@ -46,9 +42,9 @@ export default defineEventHandler(async (event) => {
 
   // 如果不是自己的 key，檢查是否有管理權限
   if (apiKey.memberRefID !== session.user.id) {
-    const hasAdminPermission = await checkPermission(
+    const hasAdminPermission = await hasMemberWithPermissions(
       db,
-      event,
+      session.user.id,
       Permissions.API_TOKEN_ADMIN
     );
 

@@ -1,6 +1,5 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import type { H3Event } from 'h3';
 import { z } from 'zod';
 
 import * as authSchema from '~~/server/database/auth-schema';
@@ -92,12 +91,5 @@ export const auth = betterAuth({
   //   },
   // },
 });
-
-export const getAuthSession = async (event: H3Event) => {
-  const headers = event.headers;
-  const session = await auth.api.getSession({ headers });
-
-  return session;
-};
 
 export * from './apiKey';

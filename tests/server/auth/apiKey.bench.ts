@@ -2,7 +2,7 @@ import { afterAll, beforeAll, bench, describe } from 'vitest';
 
 import {
   createAPIKey,
-  getAPIKeyByHash,
+  getApiKeyByHash,
   hashAPIKey,
   validateAPIKey,
 } from '~~/server/utils/auth';
@@ -57,7 +57,7 @@ describe('API Key Performance Benchmarks', () => {
   bench(
     'getAPIKeyByHash - retrieve API key by hash',
     async () => {
-      await getAPIKeyByHash(dbCtx.db, testKey);
+      await getApiKeyByHash(dbCtx.db, testKey);
     },
     { iterations: 500 }
   );
