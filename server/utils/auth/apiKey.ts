@@ -174,11 +174,13 @@ export const getApiKeyByHash = async <P extends Partial<ApiKeyFields>>(
           id: ApiKeyFields['id'];
         })
         .from(apiKeyTable)
-    : db.select().from(apiKeyTable);
+        .where(eq(apiKeyTable.key, hashedKey))
+    : db.select().from(apiKeyTable).where(eq(apiKeyTable.key, hashedKey));
 
-  apiKeyQuery.where(eq(apiKeyTable.key, hashedKey)).limit(1);
-
-  const apiKey = await apiKeyQuery.execute().then((x) => x.at(0) ?? null);
+  const apiKey = await apiKeyQuery
+    .limit(1)
+    .execute()
+    .then((x) => x.at(0) ?? null);
   if (apiKey === null) return null;
 
   return apiKey;
