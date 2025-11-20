@@ -12,11 +12,10 @@ import { Permissions } from '~~/server/utils/permission';
  */
 export default defineEventHandler(async (event) => {
   const db = useDrizzle();
-  const { user } = await requireSession(
-    db,
-    event,
-    Permissions.API_TOKEN_CREATE
-  );
+  const { user } = await requireSession(db, event, [
+    Permissions.API_TOKEN_CREATE,
+    Permissions.API_TOKEN_ADMIN,
+  ]);
   const keyID = getRouterParam(event, 'id');
   if (!keyID) {
     throw createError({

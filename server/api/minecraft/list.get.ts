@@ -1,5 +1,6 @@
 import { minecraftServersTable } from '~~/server/database/schema';
 import { requireAuthPermission } from '~~/server/utils/guards/permission';
+import { Permissions } from '~~/server/utils/permission';
 
 /**
  * 取得 Minecraft 伺服器列表
@@ -8,7 +9,10 @@ import { requireAuthPermission } from '~~/server/utils/guards/permission';
  */
 export default defineEventHandler(async (event) => {
   const db = useDrizzle();
-  await requireAuthPermission(db, event);
+  await requireAuthPermission(db, event, [
+    Permissions.MC_SERVER_STATUS_VIEW,
+    Permissions.MC_SERVER_ADMIN,
+  ]);
   const data = await db.select().from(minecraftServersTable).execute();
 
   return data;
