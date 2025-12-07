@@ -1,7 +1,18 @@
-import z from 'zod';
+import {
+  type InferOutput,
+  ip,
+  maxValue,
+  minValue,
+  number,
+  object,
+  pipe,
+  string,
+} from 'valibot';
 
-export const minecraftServerContracts = z.object({
-  serverIP: z.union([z.ipv4(), z.ipv6()]),
-  serverPort: z.number().min(1).max(65535).default(25565),
+export const minecraftServerContracts = object({
+  serverIP: pipe(string(), ip()),
+  serverPort: pipe(number(), minValue(1), maxValue(65535)),
 });
-export type MinecraftServerContracts = z.infer<typeof minecraftServerContracts>;
+export type MinecraftServerContracts = InferOutput<
+  typeof minecraftServerContracts
+>;

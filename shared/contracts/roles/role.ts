@@ -1,30 +1,42 @@
-import { z } from 'zod';
+import {
+  type InferOutput,
+  integer,
+  maxLength,
+  minLength,
+  minValue,
+  nullable,
+  number,
+  object,
+  optional,
+  pipe,
+  string,
+} from 'valibot';
 
 /**
  * 創建角色請求 Schema
  */
-export const CreateRoleRequestSchema = z.object({
-  name: z.string().min(1).max(100),
-  description: z.string().optional(),
-  permissions: z.number().int().nonnegative().default(0),
-  rank: z.number().int().default(0),
-  discordRoleRefID: z.number().int().optional(),
+export const CreateRoleRequestSchema = object({
+  name: pipe(string(), minLength(1), maxLength(100)),
+  description: optional(string()),
+  permissions: pipe(number(), integer(), minValue(0)),
+  rank: pipe(number(), integer()),
+  discordRoleRefID: optional(pipe(number(), integer())),
 });
 
-export type CreateRoleRequest = z.infer<typeof CreateRoleRequestSchema>;
+export type CreateRoleRequest = InferOutput<typeof CreateRoleRequestSchema>;
 
 /**
  * 更新角色請求 Schema
  */
-export const UpdateRoleRequestSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
-  description: z.string().optional().nullable(),
-  permissions: z.number().int().nonnegative().optional(),
-  rank: z.number().int().optional(),
-  discordRoleRefID: z.number().int().optional().nullable(),
+export const UpdateRoleRequestSchema = object({
+  name: optional(pipe(string(), minLength(1), maxLength(100))),
+  description: optional(nullable(string())),
+  permissions: optional(pipe(number(), integer(), minValue(0))),
+  rank: optional(pipe(number(), integer())),
+  discordRoleRefID: optional(nullable(pipe(number(), integer()))),
 });
 
-export type UpdateRoleRequest = z.infer<typeof UpdateRoleRequestSchema>;
+export type UpdateRoleRequest = InferOutput<typeof UpdateRoleRequestSchema>;
 
 /**
  * 角色回應型別

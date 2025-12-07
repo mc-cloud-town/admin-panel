@@ -33,6 +33,6 @@ export default defineNuxtConfig({
     },
   },
   $production: {
-    build: { transpile: ['zod'] },
+    build: { transpile: ['valibot'] },
   },
 });

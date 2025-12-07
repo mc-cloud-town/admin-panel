@@ -67,7 +67,12 @@
         </UTooltip>
       </div>
     </aside>
-    <div :class="[isCollapsed ? 'ml-16' : 'ml-64', 'p-6 min-h-screen']">
+    <div
+      :class="[
+        isCollapsed ? 'ml-16' : 'ml-64',
+        'p-6 min-h-screen flex flex-col',
+      ]"
+    >
       <slot />
     </div>
   </div>

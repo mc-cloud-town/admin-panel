@@ -1,6 +1,6 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { z } from 'zod';
+import { picklist } from 'valibot';
 
 import * as authSchema from '~~/server/database/auth-schema';
 // this is needed to generate schema
@@ -41,7 +41,7 @@ export const auth = betterAuth({
         required: true,
         input: false,
         validator: {
-          input: z.enum([
+          input: picklist([
             'NON_APPLICANT', // 尚未申請
             'FORM_SUBMITTED', // 表單已提交
             'FORM_APPROVED', // 一審通過

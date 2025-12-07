@@ -1,3 +1,5 @@
+import { parse } from 'valibot';
+
 import { createAPIKey } from '~~/server/utils/auth';
 import { requireAuthPermission } from '~~/server/utils/guards/permission';
 import { Permissions } from '~~/server/utils/permission';
@@ -17,7 +19,7 @@ export default defineEventHandler(async (event) => {
   );
 
   const body = await readValidatedBody(event, (data) =>
-    CreateAPIKeyRequestSchema.parse(data)
+    parse(CreateAPIKeyRequestSchema, data)
   );
 
   const result = await createAPIKey(db, {

@@ -1,3 +1,3 @@
-import z from 'zod';
+import { ip, pipe, string } from 'valibot';
 
-export const IPContracts = z.union([z.ipv4(), z.ipv6()]);
+export const IPContracts = pipe(string(), ip());

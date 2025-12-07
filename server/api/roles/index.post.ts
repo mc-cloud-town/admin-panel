@@ -1,3 +1,5 @@
+import { parse } from 'valibot';
+
 import { createRole } from '~~/server/utils/db/roles';
 import { requireAuthPermission } from '~~/server/utils/guards/permission';
 import { Permissions } from '~~/server/utils/permission';
@@ -16,7 +18,7 @@ export default defineEventHandler(async (event) => {
   await requireAuthPermission(db, event, Permissions.ROLE_ADMIN);
 
   const body = await readValidatedBody(event, (data) =>
-    CreateRoleRequestSchema.parse(data)
+    parse(CreateRoleRequestSchema, data)
   );
 
   const role = await createRole(db, {

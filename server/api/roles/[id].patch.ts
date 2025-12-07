@@ -1,3 +1,5 @@
+import { parse } from 'valibot';
+
 import { getRoleById, updateRole } from '~~/server/utils/db/roles';
 import { requireAuthPermission } from '~~/server/utils/guards/permission';
 import { Permissions } from '~~/server/utils/permission';
@@ -24,7 +26,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readValidatedBody(event, (data) =>
-    UpdateRoleRequestSchema.parse(data)
+    parse(UpdateRoleRequestSchema, data)
   );
 
   // 檢查角色是否存在

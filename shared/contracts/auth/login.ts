@@ -1,8 +1,18 @@
-import * as z from 'zod';
+import {
+  boolean,
+  email,
+  type InferOutput,
+  maxLength,
+  minLength,
+  object,
+  optional,
+  pipe,
+  string,
+} from 'valibot';
 
-export const authLoginContracts = z.object({
-  email: z.email(),
-  password: z.string().min(8).max(56),
-  rememberMe: z.optional(z.boolean()),
+export const authLoginContracts = object({
+  email: pipe(string(), email()),
+  password: pipe(string(), minLength(8), maxLength(56)),
+  rememberMe: optional(boolean()),
 });
-export type AuthLoginContracts = z.infer<typeof authLoginContracts>;
+export type AuthLoginContracts = InferOutput<typeof authLoginContracts>;

@@ -1,119 +1,131 @@
-import { z } from 'zod';
+import {
+  boolean,
+  date,
+  type InferOutput,
+  maxLength,
+  maxValue,
+  minLength,
+  minValue,
+  nullable,
+  number,
+  object,
+  optional,
+  pipe,
+  record,
+  string,
+  transform,
+  unknown,
+} from 'valibot';
 
-/**
- * API Key 創建請求
- */
-export const CreateAPIKeyRequestSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
-  permissions: z.number().int().min(0).optional(),
-  expiresAt: z.iso
-    .datetime()
-    .transform((v) => new Date(v))
-    .optional(),
-  prefix: z.string().max(20).optional(),
-  rateLimitEnabled: z.boolean().optional(),
-  rateLimitMax: z.number().int().min(1).max(1000000).optional(),
-  rateLimitTimeWindow: z.number().int().min(1000).optional(),
-  refillInterval: z.number().int().min(1000).optional(),
-  refillAmount: z.number().int().min(1).optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
+// API Key 創建請求
+export const CreateAPIKeyRequestSchema = object({
+  name: optional(pipe(string(), minLength(1), maxLength(100))),
+  permissions: optional(pipe(number(), minValue(0))),
+  expiresAt: optional(
+    pipe(
+      string(),
+      transform((v) => new Date(v))
+    )
+  ),
+  prefix: optional(pipe(string(), maxLength(20))),
+  rateLimitEnabled: optional(boolean()),
+  rateLimitMax: optional(pipe(number(), minValue(1), maxValue(1000000))),
+  rateLimitTimeWindow: optional(pipe(number(), minValue(1000))),
+  refillInterval: optional(pipe(number(), minValue(1000))),
+  refillAmount: optional(pipe(number(), minValue(1))),
+  metadata: optional(record(string(), unknown())),
 });
-export type CreateAPIKeyRequest = z.infer<typeof CreateAPIKeyRequestSchema>;
+export type CreateAPIKeyRequest = InferOutput<typeof CreateAPIKeyRequestSchema>;
 
-/**
- * API Key 創建回應
- */
-export const CreateAPIKeyResponseSchema = z.object({
-  id: z.string(),
-  key: z.string(), // 明文 key，只會在創建時返回一次
-  displayKey: z.string(),
-  prefix: z.string(),
-  start: z.string(),
-  createdAt: z.date(),
+// API Key 創建回應
+export const CreateAPIKeyResponseSchema = object({
+  id: string(),
+  key: string(), // 明文 key，只會在創建時返回一次
+  displayKey: string(),
+  prefix: string(),
+  start: string(),
+  createdAt: date(),
 });
-export type CreateAPIKeyResponse = z.infer<typeof CreateAPIKeyResponseSchema>;
+export type CreateAPIKeyResponse = InferOutput<
+  typeof CreateAPIKeyResponseSchema
+>;
 
-/**
- * API Key 列表項目
- */
-export const APIKeyListItemSchema = z.object({
-  id: z.string(),
-  name: z.string().nullable(),
-  displayKey: z.string(),
-  permissions: z.number(),
-  enabled: z.boolean(),
-  rateLimitEnabled: z.boolean(),
-  rateLimitMax: z.number().nullable(),
-  remaining: z.number().nullable(),
-  lastRequest: z.date().nullable(),
-  expiresAt: z.date().nullable(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-  requestCount: z.number().nullable(),
+// API Key 列表項目
+export const APIKeyListItemSchema = object({
+  id: string(),
+  name: nullable(string()),
+  displayKey: string(),
+  permissions: number(),
+  enabled: boolean(),
+  rateLimitEnabled: boolean(),
+  rateLimitMax: nullable(number()),
+  remaining: nullable(number()),
+  lastRequest: nullable(date()),
+  expiresAt: nullable(date()),
+  createdAt: date(),
+  updatedAt: date(),
+  requestCount: nullable(number()),
 });
-export type APIKeyListItem = z.infer<typeof APIKeyListItemSchema>;
+export type APIKeyListItem = InferOutput<typeof APIKeyListItemSchema>;
 
-/**
- * API Key 更新請求
- */
-export const UpdateAPIKeyRequestSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
-  enabled: z.boolean().optional(),
-  permissions: z.number().int().min(0).optional(),
-  expiresAt: z.iso
-    .datetime()
-    .transform((v) => new Date(v))
-    .nullable()
-    .optional(),
-  rateLimitEnabled: z.boolean().optional(),
-  rateLimitMax: z.number().int().min(1).max(1000000).optional(),
-  rateLimitTimeWindow: z.number().int().min(1000).optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
+// API Key 更新請求
+export const UpdateAPIKeyRequestSchema = object({
+  name: optional(pipe(string(), minLength(1), maxLength(100))),
+  enabled: optional(boolean()),
+  permissions: optional(pipe(number(), minValue(0))),
+  expiresAt: optional(
+    nullable(
+      pipe(
+        string(),
+        transform((v) => new Date(v))
+      )
+    )
+  ),
+  rateLimitEnabled: optional(boolean()),
+  rateLimitMax: optional(pipe(number(), minValue(1), maxValue(1000000))),
+  rateLimitTimeWindow: optional(pipe(number(), minValue(1000))),
+  metadata: optional(record(string(), unknown())),
 });
-export type UpdateAPIKeyRequest = z.infer<typeof UpdateAPIKeyRequestSchema>;
+export type UpdateAPIKeyRequest = InferOutput<typeof UpdateAPIKeyRequestSchema>;
 
-/**
- * API Key 詳細資訊
- */
-export const APIKeyDetailSchema = z.object({
-  id: z.string(),
-  name: z.string().nullable(),
-  displayKey: z.string(),
-  prefix: z.string(),
-  start: z.string(),
-  permissions: z.number(),
-  enabled: z.boolean(),
-  rateLimitEnabled: z.boolean(),
-  rateLimitMax: z.number().nullable(),
-  rateLimitTimeWindow: z.number().nullable(),
-  refillInterval: z.number().nullable(),
-  refillAmount: z.number().nullable(),
-  remaining: z.number().nullable(),
-  lastRefillAt: z.date().nullable(),
-  lastRequest: z.date().nullable(),
-  requestCount: z.number().nullable(),
-  expiresAt: z.date().nullable(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-  metadata: z.record(z.string(), z.unknown()).nullable(),
-  memberRefID: z.string(),
+// API Key 詳細資訊
+export const APIKeyDetailSchema = object({
+  id: string(),
+  name: nullable(string()),
+  displayKey: string(),
+  prefix: string(),
+  start: string(),
+  permissions: number(),
+  enabled: boolean(),
+  rateLimitEnabled: boolean(),
+  rateLimitMax: nullable(number()),
+  rateLimitTimeWindow: nullable(number()),
+  refillInterval: nullable(number()),
+  refillAmount: nullable(number()),
+  remaining: nullable(number()),
+  lastRefillAt: nullable(date()),
+  lastRequest: nullable(date()),
+  requestCount: nullable(number()),
+  expiresAt: nullable(date()),
+  createdAt: date(),
+  updatedAt: date(),
+  metadata: nullable(record(string(), unknown())),
+  memberRefID: string(),
 });
-export type APIKeyDetail = z.infer<typeof APIKeyDetailSchema>;
+export type APIKeyDetail = InferOutput<typeof APIKeyDetailSchema>;
 
-/**
- * API Key 驗證結果
- */
-export const APIKeyValidationResultSchema = z.object({
-  valid: z.boolean(),
-  error: z.string().optional(),
-  rateLimit: z
-    .object({
-      allowed: z.boolean(),
-      remaining: z.number(),
-      resetAt: z.date().nullable(),
+// API Key 驗證結果
+export const APIKeyValidationResultSchema = object({
+  valid: boolean(),
+  error: optional(string()),
+  rateLimit: optional(
+    object({
+      allowed: boolean(),
+      remaining: number(),
+      resetAt: nullable(date()),
     })
-    .optional(),
+  ),
 });
-export type APIKeyValidationResult = z.infer<
+export type APIKeyValidationResult = InferOutput<
   typeof APIKeyValidationResultSchema
 >;

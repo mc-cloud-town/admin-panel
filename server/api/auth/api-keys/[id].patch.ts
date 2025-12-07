@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm';
+import { parse } from 'valibot';
 
 import { apiKeyTable } from '~~/server/database/schema';
 import { updateAPIKey } from '~~/server/utils/auth';
@@ -21,7 +22,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readValidatedBody(event, (data) =>
-    UpdateAPIKeyRequestSchema.parse(data)
+    parse(UpdateAPIKeyRequestSchema, data)
   );
 
   const keyID = getRouterParam(event, 'id');

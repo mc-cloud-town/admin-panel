@@ -1,24 +1,35 @@
-import z from 'zod';
+import { type InferOutput, object, optional, union } from 'valibot';
 
 import { IPContracts } from '../common/ip';
 import { minecraftPlayerNameContracts, minecraftUUIDContracts } from './base';
 import { minecraftServerContracts } from './server';
 
-export const checkWhitelistByUUIDContracts = minecraftServerContracts.extend({
+export const checkWhitelistByUUIDContracts = object({
+  ...minecraftServerContracts.entries,
   uuid: minecraftUUIDContracts,
 });
-export type CheckWhitelistByUUIDContracts = z.infer<
+export type CheckWhitelistByUUIDContracts = InferOutput<
   typeof checkWhitelistByUUIDContracts
 >;
 
-export const checkWhitelistByPlayerNameContracts =
-  minecraftServerContracts.extend({ playerName: minecraftPlayerNameContracts });
-export type CheckWhitelistByPlayerNameContracts = z.infer<
+export const checkWhitelistByPlayerNameContracts = object({
+  ...minecraftServerContracts.entries,
+  playerName: minecraftPlayerNameContracts,
+});
+export type CheckWhitelistByPlayerNameContracts = InferOutput<
   typeof checkWhitelistByPlayerNameContracts
 >;
 
-export const checkWhitelistContracts = z.union([
-  checkWhitelistByUUIDContracts.extend({ ip: IPContracts.optional() }),
-  checkWhitelistByPlayerNameContracts.extend({ ip: IPContracts.optional() }),
+export const checkWhitelistContracts = union([
+  object({
+    ...checkWhitelistByUUIDContracts.entries,
+    ip: optional(IPContracts),
+  }),
+  object({
+    ...checkWhitelistByPlayerNameContracts.entries,
+    ip: optional(IPContracts),
+  }),
 ]);
-export type CheckWhitelistContracts = z.infer<typeof checkWhitelistContracts>;
+export type CheckWhitelistContracts = InferOutput<
+  typeof checkWhitelistContracts
+>;

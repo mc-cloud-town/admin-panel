@@ -1,13 +1,17 @@
+import type { InferSelectModel } from 'drizzle-orm';
 import { eq } from 'drizzle-orm';
 import type { PgUpdateSetSource } from 'drizzle-orm/pg-core';
 import type { H3Event } from 'h3';
 
 import type { ApiKeyFields } from '~~/server/database/schema';
 import { apiKeyTable } from '~~/server/database/schema';
-import { hasMemberWithPermissions } from '~~/server/utils/db/member';
+import { hasPermission } from '~~/server/utils/auth/permission';
+import { getMemberPermissions } from '~~/server/utils/db/member';
 import type { Permissions } from '~~/server/utils/permission';
 
 import { getApiKeyByHash, getApiKeyValueFromHeader } from '../auth';
+
+type ApiKey = InferSelectModel<typeof apiKeyTable>;
 
 /**
  * API 權限檢查 Guard
@@ -43,12 +47,15 @@ export const requireAuthPermission = async (
 
       if (validatedApiKey && validatedApiKey.apiKey) {
         // API Key 認證成功，返回模擬的 user 物件
-        const apiKeyData = validatedApiKey.apiKey as Record<string, unknown>;
+        const apiKeyData = validatedApiKey.apiKey;
+        const apiKeyPermissions = apiKeyData.permissions ?? 0;
+
         return {
           user: {
-            id: apiKeyData.memberRefID as string,
+            id: apiKeyData.memberRefID!,
             isApiKey: true,
-            apiKeyId: apiKeyData.id as string,
+            apiKeyId: apiKeyData.id!,
+            permissions: apiKeyPermissions,
           },
           db,
         };
@@ -71,31 +78,36 @@ export const requireAuthPermission = async (
     });
   }
 
-  // 如果沒有權限要求，直接返回
-  if (customPermissions === undefined) {
-    return { user: session.user, db };
+  // 獲取使用者完整權限
+  const userPermissions = await getMemberPermissions(db, session.user.id);
+
+  // 如果有權限要求，檢查使用者權限
+  if (customPermissions !== undefined) {
+    const hasRequiredPermission = hasPermission(
+      userPermissions,
+      customPermissions
+    );
+
+    if (!hasRequiredPermission) {
+      throw createError({
+        statusCode: 403,
+        message: 'Insufficient permissions',
+      });
+    }
   }
 
-  // 檢查 Session 使用者權限
-  const hasRequiredPermission = await hasMemberWithPermissions(
+  return {
+    user: {
+      ...session.user,
+      permissions: userPermissions,
+    },
     db,
-    session.user,
-    customPermissions
-  );
-
-  if (!hasRequiredPermission) {
-    throw createError({
-      statusCode: 403,
-      message: 'Insufficient permissions',
-    });
-  }
-
-  return { user: session.user, db };
+  };
 };
 
 export type CheckApiKeyResult = {
   error?: { code: string; message: string };
-  apiKey: Record<string, unknown> | null;
+  apiKey: Partial<ApiKey> | null;
 };
 
 /**
@@ -301,6 +313,7 @@ export interface AuthenticatedUser {
   id: string;
   isApiKey?: boolean;
   apiKeyId?: string;
+  permissions: number;
 }
 
 export interface AuthenticatedContext {
